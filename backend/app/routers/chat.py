@@ -10,6 +10,7 @@ router = APIRouter(prefix="/api", tags=["chat"])
 async def chat(request: ChatRequest):
     """
     Accept chat message, store it, and extract project entities using LLM.
+    If current_tasks are provided, modify them instead of re-extracting.
     """
     try:
         # Get or create session
@@ -18,20 +19,34 @@ async def chat(request: ChatRequest):
         # Append user message
         session.append_message(request.text)
         
-        # Extract entities from conversation
-        new_entities = await extract_entities_from_messages(session.messages)
-        
-        # Check for extraction errors
-        if "error" in new_entities:
-            # Still merge what we got, but log the error
-            print(f"Warning: Entity extraction had issues: {new_entities.get('error')}")
-            # Remove error from entities before merging
-            error_msg = new_entities.pop("error", None)
-            raw_content = new_entities.pop("raw_content", None)
-        
-        # Merge with existing entities
-        merged_entities = merge_entities(session.entities, new_entities)
-        session.update_entities(merged_entities)
+        # Determine if this is a modification request or initial extraction
+        if request.current_tasks is not None and len(request.current_tasks) > 0:
+            # This is a modification request - preserve manual edits
+            from ..services.parser import modify_tasks
+            
+            current_project_name = session.entities.get("project_name")
+            new_entities = await modify_tasks(
+                request.current_tasks,
+                request.text,
+                current_project_name
+            )
+            
+            # Update session with modified entities
+            session.update_entities(new_entities)
+            merged_entities = new_entities
+        else:
+            # This is initial extraction or no tasks exist yet
+            new_entities = await extract_entities_from_messages(session.messages)
+            
+            # Check for extraction errors
+            if "error" in new_entities:
+                print(f"Warning: Entity extraction had issues: {new_entities.get('error')}")
+                new_entities.pop("error", None)
+                new_entities.pop("raw_content", None)
+            
+            # Merge with existing entities
+            merged_entities = merge_entities(session.entities, new_entities)
+            session.update_entities(merged_entities)
         
         # Create a helpful response message
         task_count = len(merged_entities.get("tasks", []))

@@ -3,6 +3,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 export interface ChatRequest {
   session_id?: string;
   text: string;
+  current_tasks?: Task[];  // Current table state with manual edits
 }
 
 export interface ChatResponse {
@@ -47,12 +48,17 @@ export interface GanttItem {
 
 export async function postChat(
   sessionId: string | null,
-  text: string
+  text: string,
+  currentTasks?: Task[]
 ): Promise<ChatResponse> {
   const res = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, text }),
+    body: JSON.stringify({ 
+      session_id: sessionId, 
+      text,
+      current_tasks: currentTasks 
+    }),
   });
 
   if (!res.ok) {

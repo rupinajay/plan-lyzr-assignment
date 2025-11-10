@@ -6,6 +6,7 @@ from datetime import datetime
 class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     text: str = Field(..., min_length=1, max_length=10000)
+    current_tasks: Optional[List[dict]] = None  # Current table state with manual edits
 
 
 class Task(BaseModel):

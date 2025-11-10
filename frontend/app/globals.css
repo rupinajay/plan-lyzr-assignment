@@ -107,43 +107,159 @@
   stroke: hsl(var(--primary) / 0.8);
   stroke-width: 0;
   transition: all 0.3s ease;
-  rx: 6;
-  ry: 6;
+  rx: 8;
+  ry: 8;
 }
 
 .gantt .bar:hover {
   fill: hsl(var(--primary) / 0.9);
-  filter: brightness(1.1);
+  filter: brightness(1.15);
 }
 
-.gantt .bar-blue {
-  fill: #3b82f6;
-  stroke: #2563eb;
+/* Vibrant colors for different team members */
+/* Blue */
+.gantt .bar-blue .bar,
+.gantt .bar-wrapper.bar-blue .bar {
+  fill: #3b82f6 !important;
 }
 
-.gantt .bar-green {
-  fill: #10b981;
-  stroke: #059669;
+.gantt .bar-blue:hover .bar,
+.gantt .bar-wrapper.bar-blue:hover .bar {
+  fill: #2563eb !important;
+  filter: brightness(1.15);
 }
 
-.gantt .bar-orange {
-  fill: #f59e0b;
-  stroke: #d97706;
+/* Green */
+.gantt .bar-green .bar,
+.gantt .bar-wrapper.bar-green .bar {
+  fill: #10b981 !important;
 }
 
-.gantt .bar-purple {
-  fill: #8b5cf6;
-  stroke: #7c3aed;
+.gantt .bar-green:hover .bar,
+.gantt .bar-wrapper.bar-green:hover .bar {
+  fill: #059669 !important;
+  filter: brightness(1.15);
 }
 
-.gantt .bar-pink {
-  fill: #ec4899;
-  stroke: #db2777;
+/* Orange */
+.gantt .bar-orange .bar,
+.gantt .bar-wrapper.bar-orange .bar {
+  fill: #f59e0b !important;
 }
 
-.gantt .bar-default {
-  fill: hsl(var(--primary));
-  stroke: hsl(var(--primary) / 0.8);
+.gantt .bar-orange:hover .bar,
+.gantt .bar-wrapper.bar-orange:hover .bar {
+  fill: #d97706 !important;
+  filter: brightness(1.15);
+}
+
+/* Purple */
+.gantt .bar-purple .bar,
+.gantt .bar-wrapper.bar-purple .bar {
+  fill: #8b5cf6 !important;
+}
+
+.gantt .bar-purple:hover .bar,
+.gantt .bar-wrapper.bar-purple:hover .bar {
+  fill: #7c3aed !important;
+  filter: brightness(1.15);
+}
+
+/* Pink */
+.gantt .bar-pink .bar,
+.gantt .bar-wrapper.bar-pink .bar {
+  fill: #ec4899 !important;
+}
+
+.gantt .bar-pink:hover .bar,
+.gantt .bar-wrapper.bar-pink:hover .bar {
+  fill: #db2777 !important;
+  filter: brightness(1.15);
+}
+
+/* Red */
+.gantt .bar-red .bar,
+.gantt .bar-wrapper.bar-red .bar {
+  fill: #ef4444 !important;
+}
+
+.gantt .bar-red:hover .bar,
+.gantt .bar-wrapper.bar-red:hover .bar {
+  fill: #dc2626 !important;
+  filter: brightness(1.15);
+}
+
+/* Teal */
+.gantt .bar-teal .bar,
+.gantt .bar-wrapper.bar-teal .bar {
+  fill: #14b8a6 !important;
+}
+
+.gantt .bar-teal:hover .bar,
+.gantt .bar-wrapper.bar-teal:hover .bar {
+  fill: #0d9488 !important;
+  filter: brightness(1.15);
+}
+
+/* Indigo */
+.gantt .bar-indigo .bar,
+.gantt .bar-wrapper.bar-indigo .bar {
+  fill: #6366f1 !important;
+}
+
+.gantt .bar-indigo:hover .bar,
+.gantt .bar-wrapper.bar-indigo:hover .bar {
+  fill: #4f46e5 !important;
+  filter: brightness(1.15);
+}
+
+/* Default (Unassigned) */
+.gantt .bar-default .bar,
+.gantt .bar-wrapper.bar-default .bar {
+  fill: #6b7280 !important;
+}
+
+.gantt .bar-default:hover .bar,
+.gantt .bar-wrapper.bar-default:hover .bar {
+  fill: #4b5563 !important;
+  filter: brightness(1.15);
+}
+
+/* Color classes for legend */
+.bg-blue {
+  background-color: #3b82f6;
+}
+
+.bg-green {
+  background-color: #10b981;
+}
+
+.bg-orange {
+  background-color: #f59e0b;
+}
+
+.bg-purple {
+  background-color: #8b5cf6;
+}
+
+.bg-pink {
+  background-color: #ec4899;
+}
+
+.bg-red {
+  background-color: #ef4444;
+}
+
+.bg-teal {
+  background-color: #14b8a6;
+}
+
+.bg-indigo {
+  background-color: #6366f1;
+}
+
+.bg-default {
+  background-color: #6b7280;
 }
 
 .gantt .bar-progress {

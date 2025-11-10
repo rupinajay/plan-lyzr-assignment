@@ -11,9 +11,10 @@ interface Message {
 
 interface ChatWindowProps {
   messages: Message[];
+  onTasksUpdate?: (tasks: any[]) => void;
 }
 
-export function ChatWindow({ messages }: ChatWindowProps) {
+export function ChatWindow({ messages, onTasksUpdate }: ChatWindowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,10 +24,10 @@ export function ChatWindow({ messages }: ChatWindowProps) {
   }, [messages]);
 
   return (
-    <ScrollArea className="h-[500px] w-full rounded-md border p-4">
-      <div ref={scrollRef} className="space-y-4">
+    <ScrollArea className="h-full w-full">
+      <div ref={scrollRef} className="space-y-4 pb-4 pr-4">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="flex items-center justify-center h-[400px] text-muted-foreground">
             <p>Start a conversation to plan your project...</p>
           </div>
         ) : (
@@ -35,6 +36,7 @@ export function ChatWindow({ messages }: ChatWindowProps) {
               key={index}
               role={message.role}
               content={message.content}
+              onTasksUpdate={onTasksUpdate}
             />
           ))
         )}

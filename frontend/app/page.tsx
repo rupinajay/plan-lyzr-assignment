@@ -3,17 +3,26 @@
 import { useState } from "react";
 import { ChatWindow } from "@/components/ChatWindow";
 import { ChatInput } from "@/components/ChatInput";
-import { TaskList } from "@/components/TaskList";
+import { Sidebar } from "@/components/Sidebar";
 import { GanttModal } from "@/components/GanttModal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { postChat, generateReport, Task } from "@/lib/api";
-import { Calendar, Loader2 } from "lucide-react";
+import { Calendar, Loader2, BookOpen } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+}
+
+interface RecentProject {
+  id: string;
+  name: string;
+  timestamp: string;
+  messages: Message[];
+  tasks: Task[];
+  projectName: string | null;
+  sessionId: string | null;
 }
 
 export default function Home() {
@@ -25,14 +34,37 @@ export default function Home() {
   const [planId, setPlanId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
 
   const handleSendMessage = async (text: string) => {
     // Add user message
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setLoading(true);
 
+    // If this is the first message and no project exists, create one
+    if (!currentProjectId && messages.length === 0) {
+      const newProjectId = `project_${Date.now()}`;
+      setCurrentProjectId(newProjectId);
+      
+      const newProject: RecentProject = {
+        id: newProjectId,
+        name: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        messages: [],
+        tasks: [],
+        projectName: null,
+        sessionId: null,
+      };
+      
+      setRecentProjects(prev => [newProject, ...prev]);
+    }
+
     try {
-      const response = await postChat(sessionId, text);
+      // Send current tasks if they exist (for modification requests)
+      const currentTasks = tasks.length > 0 ? tasks : undefined;
+      const response = await postChat(sessionId, text, currentTasks);
       
       // Update session ID
       if (!sessionId) {
@@ -45,22 +77,43 @@ export default function Home() {
       }
       if (response.entities.project_name) {
         setProjectName(response.entities.project_name);
+        // Update the existing recent entry with the proper project name
+        if (currentProjectId) {
+          setRecentProjects(prev => prev.map(p => 
+            p.id === currentProjectId 
+              ? { ...p, name: response.entities.project_name || p.name, projectName: response.entities.project_name }
+              : p
+          ));
+        }
       }
 
-      // Add assistant response
+      // Store tasks data in message for table rendering
       const taskCount = response.entities.tasks?.length || 0;
-      const assistantMessage = `I've extracted ${taskCount} task${
-        taskCount !== 1 ? "s" : ""
-      } from your message. ${
-        response.entities.project_name
-          ? `Project: ${response.entities.project_name}`
-          : ""
-      }`;
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: assistantMessage },
-      ]);
+      
+      if (taskCount > 0) {
+        const messageData = {
+          type: "tasks",
+          projectName: response.entities.project_name,
+          tasks: response.entities.tasks,
+          count: taskCount,
+        };
+        
+        setMessages((prev) => [
+          ...prev,
+          { 
+            role: "assistant", 
+            content: JSON.stringify(messageData)
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { 
+            role: "assistant", 
+            content: "I'm listening! Please describe your project tasks, timelines, and team members."
+          },
+        ]);
+      }
     } catch (error) {
       setMessages((prev) => [
         ...prev,
@@ -109,73 +162,140 @@ export default function Home() {
     }
   };
 
+  const handleNewChat = () => {
+    // Save current project if it has messages
+    if (messages.length > 0 && currentProjectId) {
+      const updatedProjects = recentProjects.map(p => 
+        p.id === currentProjectId 
+          ? { ...p, messages, tasks, projectName, sessionId }
+          : p
+      );
+      setRecentProjects(updatedProjects);
+    }
+
+    // Reset to no project (will be created on first message)
+    setCurrentProjectId(null);
+    setMessages([]);
+    setSessionId(null);
+    setTasks([]);
+    setProjectName(null);
+    setPlanId(null);
+    setStartDate("");
+  };
+
+  const handleSelectProject = (projectId: string) => {
+    // Save current project state
+    if (currentProjectId && messages.length > 0) {
+      const updatedProjects = recentProjects.map(p => 
+        p.id === currentProjectId 
+          ? { ...p, messages, tasks, projectName, sessionId }
+          : p
+      );
+      setRecentProjects(updatedProjects);
+    }
+
+    // Load selected project
+    const project = recentProjects.find(p => p.id === projectId);
+    if (project) {
+      setCurrentProjectId(project.id);
+      setMessages(project.messages);
+      setTasks(project.tasks);
+      setProjectName(project.projectName);
+      setSessionId(project.sessionId);
+      setPlanId(null);
+      setStartDate("");
+    }
+  };
+
+  const handleTasksUpdate = (updatedTasks: Task[]) => {
+    // Update the tasks state immediately with manual edits
+    setTasks(updatedTasks);
+    
+    // Update the most recent task message to reflect manual edits
+    setMessages(prev => {
+      const messages = [...prev];
+      // Find the last message with tasks
+      for (let i = messages.length - 1; i >= 0; i--) {
+        try {
+          const parsed = JSON.parse(messages[i].content);
+          if (parsed.type === "tasks") {
+            messages[i] = {
+              ...messages[i],
+              content: JSON.stringify({
+                ...parsed,
+                tasks: updatedTasks,
+                count: updatedTasks.length
+              })
+            };
+            break;
+          }
+        } catch {}
+      }
+      return messages;
+    });
+  };
+
+
+
   return (
-    <main className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">PLAN</h1>
-          <p className="text-muted-foreground">
-            Chat-driven project planner with AI-powered task extraction
-          </p>
+    <main className="h-screen bg-background flex overflow-hidden">
+      {/* Sidebar */}
+      <Sidebar 
+        onNewChat={handleNewChat}
+        isCollapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        recentProjects={recentProjects}
+        currentProjectId={currentProjectId}
+        onSelectProject={handleSelectProject}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Header */}
+        <div className="bg-card px-6 py-4 flex items-center justify-between border-b">
+          <h1 className="text-2xl font-bold">Plan.</h1>
+          <Button variant="outline" className="gap-2">
+            <BookOpen className="h-4 w-4" />
+            Docs
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chat Section */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Project Chat</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ChatWindow messages={messages} />
+        {/* Chat Section */}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full min-h-0">
+            {/* Chat Messages - Middle (scrollable) */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <div className="h-full p-6">
+                <ChatWindow messages={messages} onTasksUpdate={handleTasksUpdate} />
+              </div>
+            </div>
+            
+            {/* Chat Input - Bottom (fixed) */}
+            <div className="px-6 pb-6 pt-4 border-t bg-background">
+              <div className="flex gap-3 items-center max-w-5xl mx-auto">
                 <ChatInput onSend={handleSendMessage} disabled={loading} />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Generate Report Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Generate Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Start Date (optional)
-                  </label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-                <Button
-                  onClick={handleGenerateReport}
-                  disabled={loading || !sessionId || tasks.length === 0}
-                  className="w-full"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Calendar className="mr-2 h-4 w-4" />
-                      Generate Report
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Task List */}
-            {tasks.length > 0 && (
-              <TaskList tasks={tasks} projectName={projectName} />
-            )}
+                {tasks.length > 0 && (
+                  <Button
+                    onClick={handleGenerateReport}
+                    disabled={loading || !sessionId}
+                    size="lg"
+                    className="gap-2 h-12 shrink-0 rounded-full"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="h-4 w-4" />
+                        Generate Timeline
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

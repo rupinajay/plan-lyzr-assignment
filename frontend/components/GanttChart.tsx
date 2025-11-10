@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Gantt from "frappe-gantt";
 import { GanttItem } from "@/lib/api";
 
@@ -20,19 +20,34 @@ interface FrappeTask {
 export function GanttChart({ items }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<any>(null);
+  const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month">("Week");
 
   useEffect(() => {
     if (!containerRef.current || items.length === 0) return;
 
-    // Convert items to Frappe Gantt format
-    const tasks: FrappeTask[] = items.map((item, index) => ({
-      id: `task-${index}`,
-      name: `${item.content} (${item.group || "Unassigned"})`,
-      start: item.start,
-      end: item.end,
-      progress: 0,
-      custom_class: getColorClass(item.group),
-    }));
+    // Group items by owner for better organization
+    const groupedItems = items.reduce((acc, item) => {
+      const owner = item.group || "Unassigned";
+      if (!acc[owner]) acc[owner] = [];
+      acc[owner].push(item);
+      return acc;
+    }, {} as Record<string, GanttItem[]>);
+
+    // Convert items to Frappe Gantt format with better naming
+    const tasks: FrappeTask[] = [];
+    Object.entries(groupedItems).forEach(([owner, ownerItems]) => {
+      ownerItems.forEach((item, index) => {
+        const colorClass = getColorClass(owner);
+        tasks.push({
+          id: `${owner}-${index}`,
+          name: item.content,
+          start: item.start,
+          end: item.end,
+          progress: 0,
+          custom_class: colorClass,
+        });
+      });
+    });
 
     // Destroy existing gantt instance
     if (ganttRef.current) {
@@ -42,11 +57,11 @@ export function GanttChart({ items }: GanttChartProps) {
     // Create new gantt instance
     try {
       ganttRef.current = new Gantt(containerRef.current, tasks, {
-        view_mode: "Day",
-        bar_height: 35,
-        bar_corner_radius: 6,
+        view_mode: viewMode,
+        bar_height: 40,
+        bar_corner_radius: 8,
         arrow_curve: 5,
-        padding: 18,
+        padding: 20,
         date_format: "YYYY-MM-DD",
         language: "en",
         custom_popup_html: (task: any) => {
@@ -56,13 +71,17 @@ export function GanttChart({ items }: GanttChartProps) {
             (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
           );
 
+          // Extract owner from task id
+          const owner = task.id.split('-')[0];
+
           return `
             <div class="gantt-popup">
               <div class="gantt-popup-title">${task.name}</div>
               <div class="gantt-popup-content">
-                <p><strong>Start:</strong> ${start.toLocaleDateString()}</p>
-                <p><strong>End:</strong> ${end.toLocaleDateString()}</p>
-                <p><strong>Duration:</strong> ${duration} days</p>
+                <p><strong>Owner:</strong> ${owner}</p>
+                <p><strong>Start:</strong> ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                <p><strong>End:</strong> ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                <p><strong>Duration:</strong> ${duration} day${duration !== 1 ? 's' : ''}</p>
               </div>
             </div>
           `;
@@ -78,7 +97,7 @@ export function GanttChart({ items }: GanttChartProps) {
         ganttRef.current = null;
       }
     };
-  }, [items]);
+  }, [items, viewMode]);
 
   if (items.length === 0) {
     return (
@@ -88,36 +107,71 @@ export function GanttChart({ items }: GanttChartProps) {
     );
   }
 
+  const handleViewChange = (mode: "Day" | "Week" | "Month") => {
+    setViewMode(mode);
+    ganttRef.current?.change_view_mode(mode);
+  };
+
   return (
-    <div className="w-full h-full overflow-auto">
-      <div className="gantt-controls mb-4 flex gap-2 px-4 pt-4">
-        <button
-          onClick={() => ganttRef.current?.change_view_mode("Day")}
-          className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90"
-        >
-          Day
-        </button>
-        <button
-          onClick={() => ganttRef.current?.change_view_mode("Week")}
-          className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
-        >
-          Week
-        </button>
-        <button
-          onClick={() => ganttRef.current?.change_view_mode("Month")}
-          className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
-        >
-          Month
-        </button>
+    <div className="w-full h-full overflow-auto bg-background">
+      {/* View Controls */}
+      <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleViewChange("Day")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                viewMode === "Day"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Day View
+            </button>
+            <button
+              onClick={() => handleViewChange("Week")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                viewMode === "Week"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Week View
+            </button>
+            <button
+              onClick={() => handleViewChange("Month")}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                viewMode === "Month"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              Month View
+            </button>
+          </div>
+          
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-muted-foreground font-medium">Team:</span>
+            {Array.from(new Set(items.map(item => item.group || "Unassigned"))).map((owner) => (
+              <div key={owner} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded ${getColorClass(owner).replace('bar-', 'bg-')}`} />
+                <span className="text-foreground">{owner}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <div ref={containerRef} className="px-4 pb-4" />
+      
+      {/* Gantt Chart */}
+      <div ref={containerRef} className="px-6 py-6" />
     </div>
   );
 }
 
 // Get color class based on owner
 function getColorClass(owner?: string): string {
-  if (!owner) return "bar-default";
+  if (!owner || owner === "Unassigned") return "bar-default";
 
   const colors = [
     "bar-blue",
@@ -125,6 +179,9 @@ function getColorClass(owner?: string): string {
     "bar-orange",
     "bar-purple",
     "bar-pink",
+    "bar-red",
+    "bar-teal",
+    "bar-indigo",
   ];
 
   // Simple hash function to consistently assign colors

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { SendHorizontal } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -22,17 +22,22 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex gap-3 items-center flex-1">
       <Input
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Describe your project..."
         disabled={disabled}
-        className="flex-1"
+        className="flex-1 h-12 rounded-full px-6 text-base border-2 focus-visible:ring-2 focus-visible:ring-offset-0"
         maxLength={10000}
       />
-      <Button type="submit" disabled={disabled || !input.trim()} size="icon">
-        <Send className="h-4 w-4" />
+      <Button 
+        type="submit" 
+        disabled={disabled || !input.trim()} 
+        size="icon"
+        className="h-12 w-12 rounded-full shrink-0"
+      >
+        <SendHorizontal className="h-5 w-5" />
       </Button>
     </form>
   );

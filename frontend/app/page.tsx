@@ -43,7 +43,7 @@ export default function Home() {
   const [startDate, setStartDate] = useState("");
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"home" | "chat">("chat");
+  const [viewMode, setViewMode] = useState<"home" | "chat">("home");
   const router = useRouter();
 
   // Load projects from localStorage on mount
@@ -53,8 +53,8 @@ export default function Home() {
       try {
         const projects = JSON.parse(saved);
         setRecentProjects(projects);
-        // Only show home view on initial load if there are projects AND no active chat AND not already in chat mode
-        if (projects.length > 0 && messages.length === 0 && viewMode !== "chat" && !currentProjectId) {
+        // Show home view if there are projects
+        if (projects.length > 0) {
           setViewMode("home");
         }
       } catch (e) {

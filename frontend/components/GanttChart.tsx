@@ -113,9 +113,9 @@ export function GanttChart({ items }: GanttChartProps) {
   };
 
   return (
-    <div className="w-full h-full overflow-auto bg-background">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-background">
       {/* View Controls */}
-      <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+      <div className="shrink-0 bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
             <button
@@ -163,8 +163,10 @@ export function GanttChart({ items }: GanttChartProps) {
         </div>
       </div>
       
-      {/* Gantt Chart */}
-      <div ref={containerRef} className="px-6 py-6" />
+      {/* Gantt Chart - Scrollable */}
+      <div className="flex-1 overflow-auto">
+        <div ref={containerRef} className="px-6 py-6" />
+      </div>
     </div>
   );
 }

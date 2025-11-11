@@ -155,7 +155,7 @@ export default function ProjectPage() {
         currentProjectId={params.id as string}
         onSelectProject={handleSelectProject}
       />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col h-screen overflow-hidden">
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
@@ -187,8 +187,8 @@ export default function ProjectPage() {
         </header>
         
         {/* Tabs */}
-        <Tabs defaultValue="kanban" className="flex-1 flex flex-col overflow-hidden">
-          <div className="border-b px-4">
+        <Tabs defaultValue="kanban" className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="border-b px-4 shrink-0">
             <TabsList>
               <TabsTrigger value="kanban" className="gap-2">
                 <Kanban className="h-4 w-4" />
@@ -205,7 +205,7 @@ export default function ProjectPage() {
             </TabsList>
           </div>
 
-          <TabsContent value="kanban" className="flex-1 overflow-hidden m-0 p-6">
+          <TabsContent value="kanban" className="flex-1 overflow-hidden m-0 p-6 min-h-0">
             <KanbanBoard 
               tasks={project.tasks} 
               projectName={project.name}
@@ -213,11 +213,11 @@ export default function ProjectPage() {
             />
           </TabsContent>
 
-          <TabsContent value="timeline" className="flex-1 overflow-hidden m-0">
+          <TabsContent value="timeline" className="flex-1 overflow-auto m-0 min-h-0">
             <GanttChart items={ganttItems} />
           </TabsContent>
 
-          <TabsContent value="tracker" className="flex-1 overflow-auto m-0 p-6">
+          <TabsContent value="tracker" className="flex-1 overflow-auto m-0 p-6 min-h-0">
             <ProjectTracker 
               tasks={project.tasks}
               projectName={project.name}

@@ -13,6 +13,7 @@
     }
   ],
   "env": {
-    "OPENAI_API_KEY": "@openai_api_key"
+    "LLM_BASE_URL": "@llm_base_url",
+    "LLM_API_KEY": "@llm_api_key"
   }
 }

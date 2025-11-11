@@ -90,7 +90,7 @@ function EditableTable({ messageData, onSave }: EditableTableProps) {
           </colgroup>
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">#</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">No.</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Task</th>
               <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Duration</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Owner</th>

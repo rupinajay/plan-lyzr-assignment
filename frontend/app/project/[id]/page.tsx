@@ -160,14 +160,6 @@ export default function ProjectPage() {
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="flex items-center gap-4 flex-1">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/")}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Projects
-            </Button>
             <div>
               <h1 className="text-xl font-bold">{project.name}</h1>
               <p className="text-sm text-muted-foreground">
@@ -188,7 +180,7 @@ export default function ProjectPage() {
         
         {/* Tabs */}
         <Tabs defaultValue="kanban" className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <div className="border-b px-4 shrink-0">
+          <div className="px-4 pt-4">
             <TabsList>
               <TabsTrigger value="kanban" className="gap-2">
                 <Kanban className="h-4 w-4" />

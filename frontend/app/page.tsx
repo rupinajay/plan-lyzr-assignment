@@ -367,60 +367,26 @@ export default function Home() {
         {/* Main Content Area */}
         {viewMode === "home" && recentProjects.length > 0 ? (
           /* Project Cards View */
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-            <div className="flex-1 overflow-auto p-6">
-              <div className="max-w-7xl mx-auto">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold mb-2">Your Projects</h2>
-                  <p className="text-muted-foreground">
-                    Click on a project to view its Kanban board
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {recentProjects.map((project) => (
-                    <ProjectCard
-                      key={project.id}
-                      id={project.id}
-                      name={project.projectName || project.name}
-                      tasks={project.tasks}
-                      hasTimeline={!!project.planId}
-                      onClick={() => handleProjectClick(project.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Chat Input at Bottom */}
-            <div className="px-6 pb-6 pt-4 border-t bg-background">
-              <div className="flex flex-col items-center gap-3 max-w-5xl mx-auto">
-                <p className="text-sm text-muted-foreground">
-                  Start a new project
+          <div className="flex-1 overflow-auto p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Your Projects</h2>
+                <p className="text-muted-foreground">
+                  Click on a project to view its Kanban board
                 </p>
-                <div className="flex gap-3 items-center w-full">
-                  <ChatInput onSend={handleSendMessage} disabled={loading} />
-                  {tasks.length > 0 && (
-                    <Button
-                      onClick={handleGenerateReport}
-                      disabled={loading || !sessionId}
-                      size="lg"
-                      className="gap-2 h-12 shrink-0 rounded-full"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Calendar className="h-4 w-4" />
-                          Generate Timeline
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {recentProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    name={project.projectName || project.name}
+                    tasks={project.tasks}
+                    hasTimeline={!!project.planId}
+                    onClick={() => handleProjectClick(project.id)}
+                  />
+                ))}
               </div>
             </div>
           </div>

@@ -114,14 +114,11 @@ export default function Home() {
         setTasks(response.entities.tasks);
       }
       
-      // Update tasks and project name
-      if (response.entities.tasks) {
-        setTasks(response.entities.tasks);
-      }
-      if (response.entities.project_name) {
+      // Only set project name if it hasn't been set yet (first extraction only)
+      if (response.entities.project_name && !projectName) {
         setProjectName(response.entities.project_name);
         
-        // Update project name in sidebar if AI extracted one
+        // Update project name in sidebar if AI extracted one for the first time
         if (currentProjectId) {
           const updatedProjects = recentProjects.map(p => 
             p.id === currentProjectId 
@@ -131,6 +128,15 @@ export default function Home() {
           setRecentProjects(updatedProjects);
           localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
         }
+      } else if (response.entities.tasks && currentProjectId) {
+        // If project name already exists, just update tasks without changing the name
+        const updatedProjects = recentProjects.map(p => 
+          p.id === currentProjectId 
+            ? { ...p, sessionId: response.session_id, tasks: response.entities.tasks || p.tasks }
+            : p
+        );
+        setRecentProjects(updatedProjects);
+        localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
       }
 
       // Store tasks data in message for table rendering
@@ -343,6 +349,36 @@ export default function Home() {
     });
   };
 
+  const handleDeleteProject = (projectId: string) => {
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      return;
+    }
+
+    // Remove project from list
+    const updatedProjects = recentProjects.filter(p => p.id !== projectId);
+    setRecentProjects(updatedProjects);
+    localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
+
+    // If deleting current project, reset state and go home
+    if (projectId === currentProjectId) {
+      setCurrentProjectId(null);
+      setMessages([]);
+      setSessionId(null);
+      setTasks([]);
+      setProjectName(null);
+      setPlanId(null);
+      setStartDate("");
+      
+      // Show home view if there are still projects, otherwise show blank chat
+      if (updatedProjects.length > 0) {
+        setViewMode("home");
+      } else {
+        setViewMode("chat");
+      }
+    }
+  };
+
 
 
   return (
@@ -353,6 +389,7 @@ export default function Home() {
         recentProjects={recentProjects}
         currentProjectId={currentProjectId}
         onSelectProject={handleSelectProject}
+        onDeleteProject={handleDeleteProject}
       />
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
         {/* Header */}

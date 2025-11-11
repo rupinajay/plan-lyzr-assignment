@@ -119,6 +119,23 @@ export default function ProjectPage() {
     router.push(`/project/${projectId}`);
   };
 
+  const handleDeleteProject = (projectId: string) => {
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) {
+      return;
+    }
+
+    // Remove project from list
+    const updatedProjects = recentProjects.filter(p => p.id !== projectId);
+    setRecentProjects(updatedProjects);
+    localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
+
+    // If deleting current project, go home
+    if (projectId === params.id) {
+      router.push("/");
+    }
+  };
+
   if (!project) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -154,6 +171,7 @@ export default function ProjectPage() {
         recentProjects={recentProjects}
         currentProjectId={params.id as string}
         onSelectProject={handleSelectProject}
+        onDeleteProject={handleDeleteProject}
       />
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
         {/* Header */}

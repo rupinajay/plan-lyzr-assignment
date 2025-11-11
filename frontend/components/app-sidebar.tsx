@@ -1,6 +1,7 @@
 "use client"
 
-import { Home, MessageSquare, PlusCircle } from "lucide-react"
+import { Home, MessageSquare, PlusCircle, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 import {
   Sidebar,
@@ -30,6 +31,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   recentProjects: RecentProject[]
   currentProjectId: string | null
   onSelectProject: (projectId: string) => void
+  onDeleteProject?: (projectId: string) => void
 }
 
 export function AppSidebar({ 
@@ -38,6 +40,7 @@ export function AppSidebar({
   recentProjects,
   currentProjectId,
   onSelectProject,
+  onDeleteProject,
   ...props 
 }: AppSidebarProps) {
   return (
@@ -99,18 +102,31 @@ export function AppSidebar({
               ) : (
                 <div className="space-y-2">
                   {recentProjects.map((project) => (
-                    <SidebarMenuItem key={project.id}>
+                    <SidebarMenuItem key={project.id} className="group/item relative">
                       <SidebarMenuButton
                         onClick={() => onSelectProject(project.id)}
                         isActive={currentProjectId === project.id}
                         tooltip={project.projectName || project.name}
-                        className="hover:!bg-neutral-200 dark:hover:!bg-neutral-700 transition-colors"
+                        className="hover:!bg-neutral-200 dark:hover:!bg-neutral-700 transition-colors pr-8"
                       >
                         <MessageSquare />
                         <span className="font-medium text-left w-full overflow-hidden text-ellipsis whitespace-nowrap">
                           {project.projectName || project.name}
                         </span>
                       </SidebarMenuButton>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground group-data-[collapsible=icon]:hidden"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onDeleteProject) {
+                            onDeleteProject(project.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </SidebarMenuItem>
                   ))}
                 </div>

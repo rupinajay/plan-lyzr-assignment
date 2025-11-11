@@ -11,9 +11,5 @@
       "src": "/(.*)",
       "dest": "app/main.py"
     }
-  ],
-  "env": {
-    "LLM_BASE_URL": "@llm_base_url",
-    "LLM_API_KEY": "@llm_api_key"
-  }
+  ]
 }

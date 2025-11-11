@@ -8,11 +8,12 @@ interface ProjectCardProps {
   id: string;
   name: string;
   tasks: Task[];
+  hasTimeline?: boolean;
   onClick: () => void;
 }
 
-export function ProjectCard({ id, name, tasks, onClick }: ProjectCardProps) {
-  const completedTasks = tasks.filter(t => t.start_date && t.end_date).length;
+export function ProjectCard({ id, name, tasks, hasTimeline, onClick }: ProjectCardProps) {
+  const completedTasks = tasks.filter(t => t.actual_end).length;
   const totalTasks = tasks.length;
   const owners = Array.from(new Set(tasks.map(t => t.owner).filter(Boolean)));
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -23,7 +24,14 @@ export function ProjectCard({ id, name, tasks, onClick }: ProjectCardProps) {
       onClick={onClick}
     >
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold truncate">{name}</CardTitle>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-lg font-semibold truncate">{name}</CardTitle>
+          {!hasTimeline && (
+            <span className="text-xs bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-full whitespace-nowrap">
+              No timeline
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between text-sm">

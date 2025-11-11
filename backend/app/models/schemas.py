@@ -15,8 +15,11 @@ class Task(BaseModel):
     duration_days: int
     owner: Optional[str] = None
     dependencies: List[str] = Field(default_factory=list)
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[str] = None  # Planned start (from scheduler)
+    end_date: Optional[str] = None    # Planned end (from scheduler)
+    actual_start: Optional[str] = None  # Actual start (from Kanban)
+    actual_end: Optional[str] = None    # Actual end (from Kanban)
+    status: Optional[str] = "todo"  # todo, in-progress, done
 
 
 class ChatResponse(BaseModel):

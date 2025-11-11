@@ -21,8 +21,11 @@ export interface Task {
   duration_days: number;
   owner?: string;
   dependencies: string[];
-  start_date?: string;
-  end_date?: string;
+  start_date?: string;  // Planned start (from timeline)
+  end_date?: string;    // Planned end (from timeline)
+  actual_start?: string;  // Actual start (from Kanban)
+  actual_end?: string;    // Actual end (from Kanban)
+  status?: string;  // todo, in-progress, done
 }
 
 export interface GenerateReportRequest {

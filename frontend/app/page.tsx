@@ -24,6 +24,9 @@ interface RecentProject {
   tasks: Task[];
   projectName: string | null;
   sessionId: string | null;
+  planId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export default function Home() {
@@ -181,6 +184,18 @@ export default function Home() {
       setStartDate(response.start_date);
       setModalOpen(true);
 
+      // Save planId to localStorage for current project
+      if (currentProjectId) {
+        const projects = JSON.parse(localStorage.getItem("recentProjects") || "[]");
+        const updatedProjects = projects.map((p: RecentProject) => 
+          p.id === currentProjectId 
+            ? { ...p, planId: response.plan_id, startDate: response.start_date, endDate: response.end_date, tasks: response.tasks }
+            : p
+        );
+        setRecentProjects(updatedProjects);
+        localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -222,8 +237,16 @@ export default function Home() {
   };
 
   const handleProjectClick = (projectId: string) => {
-    // Navigate to project Kanban view
-    router.push(`/project/${projectId}`);
+    // Check if project has timeline generated
+    const project = recentProjects.find(p => p.id === projectId);
+    if (project?.planId) {
+      // Navigate to project Kanban view
+      router.push(`/project/${projectId}`);
+    } else {
+      // Load project in chat to generate timeline
+      handleSelectProject(projectId);
+      setViewMode("chat");
+    }
   };
 
   const handleBackToHome = () => {
@@ -357,6 +380,7 @@ export default function Home() {
                       id={project.id}
                       name={project.projectName || project.name}
                       tasks={project.tasks}
+                      hasTimeline={!!project.planId}
                       onClick={() => handleProjectClick(project.id)}
                     />
                   ))}

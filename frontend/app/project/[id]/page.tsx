@@ -29,7 +29,6 @@ export default function ProjectPage() {
   const [planId, setPlanId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Load project from localStorage
@@ -73,40 +72,12 @@ export default function ProjectPage() {
       p.id === params.id ? { ...p, tasks: updatedTasks } : p
     );
     localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
-  };
-
-  const handleGenerateTimeline = async () => {
-    if (!project?.sessionId) {
-      alert("No session found. Please create tasks in chat first.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await generateReport(project.sessionId);
-      setPlanId(response.plan_id);
-      setStartDate(response.start_date);
-      setEndDate(response.end_date);
-      
-      // Load Gantt data
-      const ganttData = await getGanttData(response.plan_id);
-      setGanttItems(ganttData);
-      
-      // Update tasks with dates
-      handleTaskUpdate(response.tasks);
-      
-      // Save to localStorage with plan info
-      const projects = JSON.parse(localStorage.getItem("recentProjects") || "[]");
-      const updatedProjects = projects.map((p: any) => 
-        p.id === params.id 
-          ? { ...p, tasks: response.tasks, planId: response.plan_id, startDate: response.start_date, endDate: response.end_date }
-          : p
-      );
-      localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
-    } catch (error) {
-      alert(`Failed to generate timeline: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setLoading(false);
+    
+    // If Gantt data exists, reload it to reflect changes
+    if (planId) {
+      getGanttData(planId)
+        .then(data => setGanttItems(data))
+        .catch(err => console.error("Failed to reload Gantt data:", err));
     }
   };
 
@@ -123,6 +94,25 @@ export default function ProjectPage() {
     return (
       <div className="h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Loading project...</p>
+      </div>
+    );
+  }
+
+  // If no timeline generated yet, show message to go back to chat
+  if (!planId || !startDate || !endDate) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4">
+        <Calendar className="h-16 w-16 text-muted-foreground opacity-20" />
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-semibold">No Timeline Generated</h2>
+          <p className="text-muted-foreground max-w-md">
+            Please generate a timeline from the chat interface first. Click "Generate Timeline" after describing your project tasks.
+          </p>
+          <Button onClick={() => router.push("/")} className="mt-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Chat
+          </Button>
+        </div>
       </div>
     );
   }
@@ -155,16 +145,6 @@ export default function ProjectPage() {
               Export CSV
             </Button>
           )}
-          {!planId && project.tasks.length > 0 && (
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={handleGenerateTimeline}
-              disabled={loading}
-            >
-              {loading ? "Generating..." : "Generate Timeline"}
-            </Button>
-          )}
         </div>
       </div>
       
@@ -176,11 +156,11 @@ export default function ProjectPage() {
               <Kanban className="h-4 w-4" />
               Kanban Board
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="gap-2" disabled={!planId}>
+            <TabsTrigger value="timeline" className="gap-2">
               <Calendar className="h-4 w-4" />
               Timeline
             </TabsTrigger>
-            <TabsTrigger value="tracker" className="gap-2" disabled={!planId}>
+            <TabsTrigger value="tracker" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Project Tracker
             </TabsTrigger>
@@ -196,36 +176,16 @@ export default function ProjectPage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="flex-1 overflow-hidden m-0">
-          {planId && ganttItems.length > 0 ? (
-            <GanttChart items={ganttItems} />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4">
-              <Calendar className="h-16 w-16 opacity-20" />
-              <div className="text-center">
-                <p className="font-semibold mb-1">No Timeline Generated</p>
-                <p className="text-sm">Click "Generate Timeline" to create a Gantt chart</p>
-              </div>
-            </div>
-          )}
+          <GanttChart items={ganttItems} />
         </TabsContent>
 
         <TabsContent value="tracker" className="flex-1 overflow-auto m-0 p-6">
-          {planId && startDate && endDate ? (
-            <ProjectTracker 
-              tasks={project.tasks}
-              projectName={project.name}
-              startDate={startDate}
-              endDate={endDate}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-4">
-              <BarChart3 className="h-16 w-16 opacity-20" />
-              <div className="text-center">
-                <p className="font-semibold mb-1">No Tracking Data</p>
-                <p className="text-sm">Generate a timeline to view project metrics and progress</p>
-              </div>
-            </div>
-          )}
+          <ProjectTracker 
+            tasks={project.tasks}
+            projectName={project.name}
+            startDate={startDate}
+            endDate={endDate}
+          />
         </TabsContent>
       </Tabs>
     </div>

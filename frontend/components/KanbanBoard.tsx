@@ -15,9 +15,7 @@ interface KanbanBoardProps {
 type TaskStatus = "todo" | "in-progress" | "done";
 
 interface TaskWithStatus extends Task {
-  status: TaskStatus;
-  actualStartDate?: string;
-  actualEndDate?: string;
+  kanbanStatus: TaskStatus;
 }
 
 export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardProps) {
@@ -26,14 +24,12 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Only initialize once, or when tasks are completely new
+    // Initialize tasks - use status from backend or default to "todo"
     if (!initialized || kanbanTasks.length === 0) {
       setKanbanTasks(
         tasks.map(task => ({
           ...task,
-          status: "todo" as TaskStatus,
-          actualStartDate: undefined,
-          actualEndDate: undefined
+          kanbanStatus: (task.status as TaskStatus) || "todo"
         }))
       );
       setInitialized(true);
@@ -43,7 +39,7 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
         prevTasks.map(prevTask => {
           const updatedTask = tasks.find(t => t.id === prevTask.id);
           return updatedTask 
-            ? { ...updatedTask, status: prevTask.status, actualStartDate: prevTask.actualStartDate, actualEndDate: prevTask.actualEndDate } 
+            ? { ...updatedTask, kanbanStatus: prevTask.kanbanStatus } 
             : prevTask;
         })
       );
@@ -57,7 +53,7 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
   ];
 
   const getTasksByStatus = (status: TaskStatus) => {
-    return kanbanTasks.filter(task => task.status === status);
+    return kanbanTasks.filter(task => task.kanbanStatus === status);
   };
 
   const handleDragStart = (task: TaskWithStatus) => {
@@ -75,20 +71,20 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
 
     const updatedTasks = kanbanTasks.map(task => {
       if (task.id === draggedTask.id) {
-        const updates: any = { status: targetStatus };
+        const updates: any = { kanbanStatus: targetStatus, status: targetStatus };
         
         if (targetStatus === "in-progress") {
           // Set actual start date
-          updates.actualStartDate = task.actualStartDate || now;
-          updates.actualEndDate = undefined;
+          updates.actual_start = task.actual_start || now;
+          updates.actual_end = undefined;
         } else if (targetStatus === "done") {
           // Set actual completion date
-          updates.actualStartDate = task.actualStartDate || now;
-          updates.actualEndDate = now;
+          updates.actual_start = task.actual_start || now;
+          updates.actual_end = now;
         } else {
           // Moving back to todo - clear actual dates
-          updates.actualStartDate = undefined;
-          updates.actualEndDate = undefined;
+          updates.actual_start = undefined;
+          updates.actual_end = undefined;
         }
         
         return { ...task, ...updates };
@@ -99,9 +95,9 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
     setKanbanTasks(updatedTasks);
     setDraggedTask(null);
     
-    // Auto-save immediately
+    // Auto-save immediately with updated dates for ProjectTracker
     if (onTasksUpdate) {
-      const tasksToSave = updatedTasks.map(({ status, actualStartDate, actualEndDate, ...task }) => task);
+      const tasksToSave = updatedTasks.map(({ kanbanStatus, ...task }) => task);
       onTasksUpdate(tasksToSave);
     }
   };
@@ -202,15 +198,15 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
                         )}
                         
                         {/* Actual Status */}
-                        {task.actualStartDate && (
+                        {task.actual_start && (
                           <div className="text-xs">
-                            {task.actualEndDate ? (
+                            {task.actual_end ? (
                               <span className="text-green-600 dark:text-green-400 font-medium">
-                                Completed {new Date(task.actualEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                Completed {new Date(task.actual_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
                             ) : (
                               <span className="text-blue-600 dark:text-blue-400 font-medium">
-                                Started {new Date(task.actualStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                Started {new Date(task.actual_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
                             )}
                           </div>

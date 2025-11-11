@@ -9,15 +9,20 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GanttChart } from "./GanttChart";
-import { getGanttData, downloadCSV, GanttItem } from "@/lib/api";
-import { Download, Loader2 } from "lucide-react";
+import { ProjectTracker } from "./ProjectTracker";
+import { getGanttData, downloadCSV, GanttItem, Task } from "@/lib/api";
+import { Download, Loader2, BarChart3, Calendar } from "lucide-react";
 
 interface GanttModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planId: string | null;
   projectName: string;
+  tasks?: Task[];
+  startDate?: string;
+  endDate?: string;
 }
 
 export function GanttModal({
@@ -25,6 +30,9 @@ export function GanttModal({
   onOpenChange,
   planId,
   projectName,
+  tasks = [],
+  startDate = "",
+  endDate = "",
 }: GanttModalProps) {
   const [ganttItems, setGanttItems] = useState<GanttItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,27 +76,55 @@ export function GanttModal({
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-2xl font-bold">{projectName}</DialogTitle>
           <DialogDescription className="text-base">
-            Interactive project timeline with task breakdown by team member
+            Interactive project timeline with task breakdown and progress tracking
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden mt-6 rounded-lg border shadow-sm bg-background">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Loading timeline...</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <div className="text-destructive text-center">
-                <p className="font-semibold">Failed to load timeline</p>
-                <p className="text-sm mt-1">{error}</p>
+        <Tabs defaultValue="timeline" className="flex-1 flex flex-col overflow-hidden mt-6">
+          <TabsList className="w-fit">
+            <TabsTrigger value="timeline" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Timeline
+            </TabsTrigger>
+            <TabsTrigger value="tracker" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Project Tracker
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="timeline" className="flex-1 overflow-hidden mt-4 rounded-lg border shadow-sm bg-background">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading timeline...</p>
               </div>
-            </div>
-          ) : (
-            <GanttChart items={ganttItems} />
-          )}
-        </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3">
+                <div className="text-destructive text-center">
+                  <p className="font-semibold">Failed to load timeline</p>
+                  <p className="text-sm mt-1">{error}</p>
+                </div>
+              </div>
+            ) : (
+              <GanttChart items={ganttItems} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="tracker" className="flex-1 overflow-auto mt-4 p-6 rounded-lg border shadow-sm bg-background">
+            {tasks.length > 0 && startDate && endDate ? (
+              <ProjectTracker 
+                tasks={tasks}
+                projectName={projectName}
+                startDate={startDate}
+                endDate={endDate}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p>No tracking data available</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         <div className="flex justify-between items-center gap-2 mt-6 pt-4 border-t">
           <div className="text-sm text-muted-foreground">

@@ -6,6 +6,7 @@ import { ChatWindow } from "@/components/ChatWindow";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { GanttModal } from "@/components/GanttModal";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
@@ -355,9 +356,10 @@ export default function Home() {
       />
       <SidebarInset className="flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1" />
+          <ThemeToggle />
           <Button variant="outline" className="gap-2">
             <BookOpen className="h-4 w-4" />
             Docs
@@ -457,7 +459,7 @@ export default function Home() {
             </div>
             
             {/* Chat Input - Bottom (fixed) */}
-            <div className="px-6 pb-6 pt-4 border-t bg-background shrink-0">
+            <div className="px-6 pb-6 pt-4 bg-background shrink-0">
               <div className="flex gap-3 items-center max-w-6xl mx-auto">
                 <ChatInput onSend={handleSendMessage} disabled={loading} />
                 {tasks.length > 0 && (

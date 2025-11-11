@@ -48,7 +48,7 @@ export function AppSidebar({
             <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
 
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold text-xl">
+                <span className="truncate font-semibold text-3xl">
                   Plan.
                 </span>
               </div>
@@ -61,13 +61,21 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onHome} tooltip="Home">
+                <SidebarMenuButton 
+                  onClick={onHome} 
+                  tooltip="Home" 
+                  className="hover:!bg-neutral-200 dark:hover:!bg-neutral-700 transition-colors"
+                >
                   <Home />
                   <span>Home</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onNewChat} tooltip="New Project">
+                <SidebarMenuButton 
+                  onClick={onNewChat} 
+                  tooltip="New Project" 
+                  className="hover:!bg-neutral-200 dark:hover:!bg-neutral-700 transition-colors"
+                >
                   <PlusCircle />
                   <span>New Project</span>
                 </SidebarMenuButton>
@@ -75,7 +83,7 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
+        <SidebarGroup className="mt-4">
           <SidebarGroupLabel>Recent Projects</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -96,7 +104,7 @@ export function AppSidebar({
                         onClick={() => onSelectProject(project.id)}
                         isActive={currentProjectId === project.id}
                         tooltip={project.projectName || project.name}
-                        className="transition-colors duration-200"
+                        className="hover:!bg-neutral-200 dark:hover:!bg-neutral-700 transition-colors"
                       >
                         <MessageSquare />
                         <span className="font-medium text-left w-full overflow-hidden text-ellipsis whitespace-nowrap">
@@ -111,15 +119,6 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="flex items-center justify-center p-2">
-              <ThemeToggle />
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )

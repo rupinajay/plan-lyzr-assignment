@@ -16,21 +16,39 @@ type TaskStatus = "todo" | "in-progress" | "done";
 
 interface TaskWithStatus extends Task {
   status: TaskStatus;
+  actualStartDate?: string;
+  actualEndDate?: string;
 }
 
 export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardProps) {
-  // Initialize tasks with status based on dates
   const [kanbanTasks, setKanbanTasks] = useState<TaskWithStatus[]>([]);
   const [draggedTask, setDraggedTask] = useState<TaskWithStatus | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    setKanbanTasks(
-      tasks.map(task => ({
-        ...task,
-        status: task.end_date ? "done" : task.start_date ? "in-progress" : "todo"
-      }))
-    );
-  }, [tasks]);
+    // Only initialize once, or when tasks are completely new
+    if (!initialized || kanbanTasks.length === 0) {
+      setKanbanTasks(
+        tasks.map(task => ({
+          ...task,
+          status: "todo" as TaskStatus,
+          actualStartDate: undefined,
+          actualEndDate: undefined
+        }))
+      );
+      setInitialized(true);
+    } else {
+      // Update existing tasks without resetting status
+      setKanbanTasks(prevTasks => 
+        prevTasks.map(prevTask => {
+          const updatedTask = tasks.find(t => t.id === prevTask.id);
+          return updatedTask 
+            ? { ...updatedTask, status: prevTask.status, actualStartDate: prevTask.actualStartDate, actualEndDate: prevTask.actualEndDate } 
+            : prevTask;
+        })
+      );
+    }
+  }, [tasks, initialized, kanbanTasks.length]);
 
   const columns: { id: TaskStatus; title: string; color: string }[] = [
     { id: "todo", title: "To Do", color: "bg-slate-100 dark:bg-slate-800" },
@@ -53,21 +71,24 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
   const handleDrop = (targetStatus: TaskStatus) => {
     if (!draggedTask) return;
 
+    const now = new Date().toISOString().split('T')[0];
+
     const updatedTasks = kanbanTasks.map(task => {
       if (task.id === draggedTask.id) {
-        // Update dates based on status
-        const now = new Date().toISOString().split('T')[0];
-        let updates: Partial<Task> = { status: targetStatus };
+        const updates: any = { status: targetStatus };
         
         if (targetStatus === "in-progress") {
-          updates.start_date = task.start_date || now;
-          updates.end_date = undefined;
+          // Set actual start date
+          updates.actualStartDate = task.actualStartDate || now;
+          updates.actualEndDate = undefined;
         } else if (targetStatus === "done") {
-          updates.start_date = task.start_date || now;
-          updates.end_date = now;
+          // Set actual completion date
+          updates.actualStartDate = task.actualStartDate || now;
+          updates.actualEndDate = now;
         } else {
-          updates.start_date = undefined;
-          updates.end_date = undefined;
+          // Moving back to todo - clear actual dates
+          updates.actualStartDate = undefined;
+          updates.actualEndDate = undefined;
         }
         
         return { ...task, ...updates };
@@ -80,7 +101,7 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
     
     // Auto-save immediately
     if (onTasksUpdate) {
-      const tasksToSave = updatedTasks.map(({ status, ...task }) => task);
+      const tasksToSave = updatedTasks.map(({ status, actualStartDate, actualEndDate, ...task }) => task);
       onTasksUpdate(tasksToSave);
     }
   };
@@ -131,59 +152,70 @@ export function KanbanBoard({ tasks, projectName, onTasksUpdate }: KanbanBoardPr
               {getTasksByStatus(column.id).map(task => (
                 <Card 
                   key={task.id} 
-                  className="cursor-move hover:shadow-lg transition-all border-l-4 border-l-blue-500 bg-white dark:bg-slate-800 hover:border-l-blue-600"
+                  className="cursor-move hover:shadow-md transition-shadow bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   draggable
                   onDragStart={() => handleDragStart(task)}
                 >
-                  <CardContent className="p-3 space-y-2">
-                    {/* Task Title */}
-                    <div className="flex items-start gap-2">
+                  <CardContent className="p-0">
+                    {/* Header - Title & Drag Handle */}
+                    <div className="flex items-start gap-2 p-3 pb-2">
                       <GripVertical className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug flex-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-tight flex-1">
                         {task.title}
                       </p>
                     </div>
 
-                    {/* Task Meta */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Duration Badge */}
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        ⏱️ {task.duration_days}d
-                      </Badge>
-
-                      {/* Owner */}
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={task.owner || ''}
-                          onChange={(e) => handleOwnerChange(task.id, e.target.value)}
-                          placeholder="Unassigned"
-                          className="w-full text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          onClick={(e) => e.stopPropagation()}
-                        />
+                    {/* Body - Metadata */}
+                    <div className="px-3 pb-2 space-y-2">
+                      {/* Duration & Dependencies */}
+                      <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                        <span>{task.duration_days}d</span>
+                        {task.dependencies && task.dependencies.length > 0 && (
+                          <>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span>{task.dependencies.length} blocked</span>
+                          </>
+                        )}
                       </div>
+
+                      {/* Owner Assignment */}
+                      <input
+                        type="text"
+                        value={task.owner || ''}
+                        onChange={(e) => handleOwnerChange(task.id, e.target.value)}
+                        placeholder="Unassigned"
+                        className="w-full text-xs px-2 py-1.5 rounded bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-800"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
 
-                    {/* Dependencies */}
-                    {task.dependencies && task.dependencies.length > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                        <span>🔗</span>
-                        <span>{task.dependencies.length} blocked by</span>
+                    {/* Footer - Timeline & Status */}
+                    <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                      <div className="space-y-1">
+                        {/* Planned Timeline */}
+                        {task.start_date && task.end_date && (
+                          <div className="text-xs text-slate-500 dark:text-slate-500">
+                            Planned: {new Date(task.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {' - '}
+                            {new Date(task.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        )}
+                        
+                        {/* Actual Status */}
+                        {task.actualStartDate && (
+                          <div className="text-xs">
+                            {task.actualEndDate ? (
+                              <span className="text-green-600 dark:text-green-400 font-medium">
+                                Completed {new Date(task.actualEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            ) : (
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                Started {new Date(task.actualStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {/* Dates */}
-                    <div className="flex items-center gap-2 text-xs">
-                      {task.start_date && (
-                        <span className="text-slate-600 dark:text-slate-400">
-                          📅 {new Date(task.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      )}
-                      {task.end_date && (
-                        <span className="text-green-600 dark:text-green-400 font-medium">
-                          ✓ {new Date(task.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      )}
                     </div>
                   </CardContent>
                 </Card>

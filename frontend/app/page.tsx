@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChatWindow } from "@/components/ChatWindow";
+import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
-import { Sidebar } from "@/components/Sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { GanttModal } from "@/components/GanttModal";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { postChat, generateReport, Task } from "@/lib/api";
 import { Calendar, Loader2, BookOpen } from "lucide-react";
 
@@ -38,7 +40,6 @@ export default function Home() {
   const [planId, setPlanId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"home" | "chat">("chat");
@@ -51,15 +52,15 @@ export default function Home() {
       try {
         const projects = JSON.parse(saved);
         setRecentProjects(projects);
-        // Only show home view if there are projects AND no active chat
-        if (projects.length > 0 && messages.length === 0) {
+        // Only show home view on initial load if there are projects AND no active chat AND not already in chat mode
+        if (projects.length > 0 && messages.length === 0 && viewMode !== "chat" && !currentProjectId) {
           setViewMode("home");
         }
       } catch (e) {
         console.error("Failed to load projects:", e);
       }
     }
-  }, [messages.length]);
+  }, []); // Run only once on mount
 
   // Save projects to localStorage when they change
   useEffect(() => {
@@ -85,13 +86,16 @@ export default function Home() {
         id: newProjectId,
         name: text.substring(0, 50) + (text.length > 50 ? "..." : ""),
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        messages: [],
+        messages: [{ role: "user", content: text }],
         tasks: [],
         projectName: null,
         sessionId: null,
       };
       
-      setRecentProjects(prev => [newProject, ...prev]);
+      // Update the sidebar immediately with the new project
+      const updatedProjects = [newProject, ...recentProjects];
+      setRecentProjects(updatedProjects);
+      localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
     }
 
     try {
@@ -118,11 +122,13 @@ export default function Home() {
         
         // Update project name in sidebar if AI extracted one
         if (currentProjectId) {
-          setRecentProjects(prev => prev.map(p => 
+          const updatedProjects = recentProjects.map(p => 
             p.id === currentProjectId 
-              ? { ...p, projectName: response.entities.project_name }
+              ? { ...p, projectName: response.entities.project_name, sessionId: response.session_id, tasks: response.entities.tasks || p.tasks }
               : p
-          ));
+          );
+          setRecentProjects(updatedProjects);
+          localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
         }
       }
 
@@ -223,6 +229,7 @@ export default function Home() {
           : p
       );
       setRecentProjects(updatedProjects);
+      localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
     }
 
     // Reset to new project state (will be created on first message)
@@ -233,6 +240,7 @@ export default function Home() {
     setProjectName(null);
     setPlanId(null);
     setStartDate("");
+    // Force chat view to show blank chat
     setViewMode("chat");
   };
 
@@ -337,33 +345,29 @@ export default function Home() {
 
 
   return (
-    <main className="h-screen bg-background flex overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar 
+    <SidebarProvider defaultOpen={true}>
+      <AppSidebar 
         onNewChat={handleNewChat}
         onHome={handleHome}
-        isCollapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         recentProjects={recentProjects}
         currentProjectId={currentProjectId}
         onSelectProject={handleSelectProject}
       />
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <SidebarInset className="flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <div className="bg-card px-6 py-4 flex items-center justify-between border-b">
-          <h1 className="text-2xl font-bold">Plan.</h1>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <div className="flex-1" />
           <Button variant="outline" className="gap-2">
             <BookOpen className="h-4 w-4" />
             Docs
           </Button>
-        </div>
+        </header>
 
         {/* Main Content Area */}
         {viewMode === "home" && recentProjects.length > 0 ? (
           /* Project Cards View */
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             <div className="flex-1 overflow-auto p-6">
               <div className="max-w-7xl mx-auto">
                 <div className="mb-6">
@@ -423,91 +427,98 @@ export default function Home() {
         ) : (
           /* Chat Section */
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-            <div className="flex-1 flex flex-col max-w-6xl mx-auto w-full min-h-0">
-              {/* Chat Messages - Middle (scrollable) */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <div className="h-full p-6">
-                  {messages.length === 0 ? (
-                    recentProjects.length === 0 ? (
-                      // First time user - show welcome with feature cards
-                      <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                        <div className="space-y-3 max-w-2xl">
-                          <h2 className="text-3xl font-bold">Welcome to Plan.</h2>
-                          <p className="text-lg text-muted-foreground">
-                            Your AI-powered project planning assistant
+            {/* Chat Messages - Scrollable Area */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-6xl mx-auto p-6">
+                {messages.length === 0 ? (
+                  recentProjects.length === 0 ? (
+                    // First time user - show welcome with feature cards
+                    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
+                      <div className="space-y-3 max-w-2xl">
+                        <h2 className="text-3xl font-bold">Welcome to Plan.</h2>
+                        <p className="text-lg text-muted-foreground">
+                          Your AI-powered project planning assistant
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl w-full">
+                        <div className="p-4 rounded-lg border bg-card">
+                          <h3 className="font-semibold mb-1">Describe Your Project</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Chat naturally about your project goals and tasks
                           </p>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl w-full">
-                          <div className="p-4 rounded-lg border bg-card">
-                            <h3 className="font-semibold mb-1">Describe Your Project</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Chat naturally about your project goals and tasks
-                            </p>
-                          </div>
-                          
-                          <div className="p-4 rounded-lg border bg-card">
-                            <h3 className="font-semibold mb-1">Edit & Refine</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Manually edit tasks or ask AI to make changes
-                            </p>
-                          </div>
-                          
-                          <div className="p-4 rounded-lg border bg-card">
-                            <h3 className="font-semibold mb-1">Visualize Timeline</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Generate Gantt charts and track progress
-                            </p>
-                          </div>
+                        <div className="p-4 rounded-lg border bg-card">
+                          <h3 className="font-semibold mb-1">Edit & Refine</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Manually edit tasks or ask AI to make changes
+                          </p>
                         </div>
-                      </div>
-                    ) : (
-                      // New project - simple blank state
-                      <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                        <div className="space-y-2 max-w-md">
-                          <h2 className="text-2xl font-bold">New Project</h2>
-                          <p className="text-muted-foreground">
-                            Describe your project below to get started
+                        
+                        <div className="p-4 rounded-lg border bg-card">
+                          <h3 className="font-semibold mb-1">Visualize Timeline</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Generate Gantt charts and track progress
                           </p>
                         </div>
                       </div>
-                    )
+                    </div>
                   ) : (
-                    <ChatWindow messages={messages} onTasksUpdate={handleTasksUpdate} />
-                  )}
-                </div>
+                    // New project - simple blank state
+                    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="space-y-2 max-w-md">
+                        <h2 className="text-2xl font-bold">New Project</h2>
+                        <p className="text-muted-foreground">
+                          Describe your project below to get started
+                        </p>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div className="space-y-4">
+                    {messages.map((message, index) => (
+                      <ChatMessage
+                        key={index}
+                        role={message.role}
+                        content={message.content}
+                        onTasksUpdate={handleTasksUpdate}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-              
-              {/* Chat Input - Bottom (fixed) */}
-              <div className="px-6 pb-6 pt-4 border-t bg-background">
-                <div className="flex gap-3 items-center max-w-5xl mx-auto">
-                  <ChatInput onSend={handleSendMessage} disabled={loading} />
-                  {tasks.length > 0 && (
-                    <Button
-                      onClick={handleGenerateReport}
-                      disabled={loading || !sessionId}
-                      size="lg"
-                      className="gap-2 h-12 shrink-0 rounded-full"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Calendar className="h-4 w-4" />
-                          Generate Timeline
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+            </div>
+            
+            {/* Chat Input - Bottom (fixed) */}
+            <div className="px-6 pb-6 pt-4 border-t bg-background shrink-0">
+              <div className="flex gap-3 items-center max-w-6xl mx-auto">
+                <ChatInput onSend={handleSendMessage} disabled={loading} />
+                {tasks.length > 0 && (
+                  <Button
+                    onClick={handleGenerateReport}
+                    disabled={loading || !sessionId}
+                    size="lg"
+                    className="gap-2 h-12 shrink-0 rounded-full"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="h-4 w-4" />
+                        Generate Timeline
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         )}
-      </div>
+      </SidebarInset>
 
       {/* Gantt Modal */}
       <GanttModal
@@ -519,6 +530,6 @@ export default function Home() {
         startDate={startDate}
         endDate={startDate}
       />
-    </main>
+    </SidebarProvider>
   );
 }

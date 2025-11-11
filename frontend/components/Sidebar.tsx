@@ -59,6 +59,22 @@ export function Sidebar({
 
       {/* Header */}
       <div className="p-4 space-y-2">
+        {/* App Branding */}
+        <div className={cn(
+          "flex items-center gap-2 px-2 py-3 mb-2",
+          isCollapsed ? "justify-center" : "justify-start"
+        )}>
+          {!isCollapsed ? (
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              PLAN
+            </h1>
+          ) : (
+            <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              P
+            </div>
+          )}
+        </div>
+
         <Button 
           onClick={onHome}
           variant="ghost"

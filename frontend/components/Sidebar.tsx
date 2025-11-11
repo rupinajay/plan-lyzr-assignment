@@ -19,6 +19,7 @@ interface RecentProject {
 
 interface SidebarProps {
   onNewChat?: () => void;
+  onHome?: () => void;
   isCollapsed: boolean;
   onToggle: () => void;
   recentProjects: RecentProject[];
@@ -27,7 +28,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ 
-  onNewChat, 
+  onNewChat,
+  onHome,
   isCollapsed, 
   onToggle, 
   recentProjects,
@@ -58,6 +60,7 @@ export function Sidebar({
       {/* Header */}
       <div className="p-4 space-y-2">
         <Button 
+          onClick={onHome}
           variant="ghost"
           className={cn(
             "w-full gap-2 transition-all",

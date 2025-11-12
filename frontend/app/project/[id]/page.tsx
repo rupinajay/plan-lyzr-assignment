@@ -116,7 +116,9 @@ export default function ProjectPage() {
   };
 
   const handleSelectProject = (projectId: string) => {
-    router.push(`/project/${projectId}`);
+    // Always navigate back to home (chat) with the selected project
+    // The main page will load the project's session and messages
+    router.push(`/?projectId=${projectId}`);
   };
 
   const handleDeleteProject = (projectId: string) => {

@@ -67,7 +67,7 @@ async def startup_event():
     if not llm_api_key:
         print("⚠️  WARNING: LLM_API_KEY not set in environment")
     else:
-        print(f"✅ LLM configured: {llm_base_url}")
+        print(f" LLM configured: {llm_base_url}")
 
 
 @app.on_event("shutdown")

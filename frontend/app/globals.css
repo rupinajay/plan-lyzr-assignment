@@ -383,3 +383,114 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Dark mode specific Gantt styling */
+.dark .gantt .grid-background {
+  fill: hsl(var(--background));
+}
+
+.dark .gantt .grid-header {
+  fill: hsl(var(--muted));
+  stroke: hsl(var(--border));
+}
+
+.dark .gantt .grid-row {
+  fill: hsl(var(--card));
+}
+
+.dark .gantt .grid-row:nth-child(even) {
+  fill: hsl(var(--muted) / 0.2);
+}
+
+.dark .gantt .row-line {
+  stroke: hsl(var(--border) / 0.8);
+}
+
+.dark .gantt .tick {
+  stroke: hsl(var(--border) / 0.5);
+}
+
+.dark .gantt .tick.thick {
+  stroke: hsl(var(--border) / 0.9);
+}
+
+.dark .gantt .today-highlight {
+  fill: hsl(var(--destructive) / 0.15);
+  opacity: 0.6;
+}
+
+.dark .gantt .bar-label {
+  fill: white;
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 1.5px;
+}
+
+.dark .gantt .lower-text,
+.dark .gantt .upper-text {
+  fill: hsl(var(--foreground));
+}
+
+.dark .gantt-popup {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.dark .gantt-popup-title {
+  color: hsl(var(--foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .gantt-popup-content p {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .gantt-popup-content strong {
+  color: hsl(var(--foreground));
+}
+
+/* Dark mode - slightly adjusted task bar colors for better contrast */
+.dark .gantt .bar-blue .bar,
+.dark .gantt .bar-wrapper.bar-blue .bar {
+  fill: #60a5fa !important;
+}
+
+.dark .gantt .bar-green .bar,
+.dark .gantt .bar-wrapper.bar-green .bar {
+  fill: #34d399 !important;
+}
+
+.dark .gantt .bar-orange .bar,
+.dark .gantt .bar-wrapper.bar-orange .bar {
+  fill: #fbbf24 !important;
+}
+
+.dark .gantt .bar-purple .bar,
+.dark .gantt .bar-wrapper.bar-purple .bar {
+  fill: #a78bfa !important;
+}
+
+.dark .gantt .bar-pink .bar,
+.dark .gantt .bar-wrapper.bar-pink .bar {
+  fill: #f472b6 !important;
+}
+
+.dark .gantt .bar-red .bar,
+.dark .gantt .bar-wrapper.bar-red .bar {
+  fill: #f87171 !important;
+}
+
+.dark .gantt .bar-teal .bar,
+.dark .gantt .bar-wrapper.bar-teal .bar {
+  fill: #2dd4bf !important;
+}
+
+.dark .gantt .bar-indigo .bar,
+.dark .gantt .bar-wrapper.bar-indigo .bar {
+  fill: #818cf8 !important;
+}
+
+.dark .gantt .bar-default .bar,
+.dark .gantt .bar-wrapper.bar-default .bar {
+  fill: #9ca3af !important;
+}

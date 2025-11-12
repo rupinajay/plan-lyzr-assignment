@@ -38,6 +38,21 @@ async def chat(request: ChatRequest):
             # This is initial extraction or no tasks exist yet
             new_entities = await extract_entities_from_messages(session.messages)
             
+            print(f"[DEBUG] AI Response: {new_entities}")
+            print(f"[DEBUG] Has clarification_needed: {new_entities.get('clarification_needed')}")
+            print(f"[DEBUG] AI Message: {new_entities.get('message')}")
+            
+            # Check if AI needs clarification
+            if new_entities.get("clarification_needed"):
+                # Return the clarification message to the user
+                clarification_message = new_entities.get("message", "I need more information to create a proper plan. Could you provide more details?")
+                print(f"[DEBUG] Returning clarification: {clarification_message}")
+                return ChatResponse(
+                    session_id=session.id,
+                    entities=session.entities,  # Return existing entities, don't change them
+                    message=clarification_message
+                )
+            
             # Check for extraction errors
             if "error" in new_entities:
                 print(f"Warning: Entity extraction had issues: {new_entities.get('error')}")
@@ -48,16 +63,12 @@ async def chat(request: ChatRequest):
             merged_entities = merge_entities(session.entities, new_entities)
             session.update_entities(merged_entities)
         
-        # Create a helpful response message
-        task_count = len(merged_entities.get("tasks", []))
-        project_name = merged_entities.get("project_name")
-        
-        if task_count == 0:
-            message = "I'm listening! Please describe your project tasks, timelines, and team members."
-        elif task_count == 1:
-            message = f"Got it! I've identified 1 task{f' for {project_name}' if project_name else ''}. Add more details or click 'Generate Report' to see the timeline."
-        else:
-            message = f"Excellent! I've extracted {task_count} tasks{f' for {project_name}' if project_name else ''}. You can add more or generate the timeline now."
+        #  ALWAYS use the AI's message - NO hardcoded messages!
+        # The AI provides context-aware messages for all scenarios:
+        # - Clarification requests
+        # - Task creation with assignments
+        # - Task creation without assignments
+        message = new_entities.get("message", "I'm ready to help you plan your project!")
         
         return ChatResponse(
             session_id=session.id,

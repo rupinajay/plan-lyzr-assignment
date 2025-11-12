@@ -31,6 +31,7 @@ export interface Task {
 export interface GenerateReportRequest {
   session_id: string;
   start_date?: string;
+  tasks?: Task[];  // Optional: edited tasks to use instead of session tasks
 }
 
 export interface GenerateReportResponse {
@@ -74,12 +75,17 @@ export async function postChat(
 
 export async function generateReport(
   sessionId: string,
-  startDate?: string
+  startDate?: string,
+  tasks?: Task[]
 ): Promise<GenerateReportResponse> {
   const res = await fetch(`${API_BASE}/api/generate_report`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, start_date: startDate }),
+    body: JSON.stringify({ 
+      session_id: sessionId, 
+      start_date: startDate,
+      tasks: tasks  // Send edited tasks if provided
+    }),
   });
 
   if (!res.ok) {

@@ -12,6 +12,8 @@ router = APIRouter(prefix="/api", tags=["generate"])
 async def generate_report(request: GenerateReportRequest):
     """
     Finalize plan, schedule tasks with dependencies, and return structured report.
+    If tasks are provided in the request, use those (edited tasks from frontend).
+    Otherwise, use tasks from the session.
     """
     try:
         # Get session
@@ -20,13 +22,21 @@ async def generate_report(request: GenerateReportRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        entities = session.entities
-        
-        if not entities.get("tasks"):
-            raise HTTPException(status_code=400, detail="No tasks found in session")
+        # Use provided tasks if available (edited tasks), otherwise use session tasks
+        if request.tasks:
+            # Use the edited tasks from the frontend
+            tasks_data = request.tasks
+            project_name = session.entities.get("project_name") or "Untitled Project"
+        else:
+            # Use original tasks from session
+            entities = session.entities
+            if not entities.get("tasks"):
+                raise HTTPException(status_code=400, detail="No tasks found in session")
+            tasks_data = entities["tasks"]
+            project_name = entities.get("project_name") or "Untitled Project"
         
         # Convert to Task objects
-        tasks = [Task(**task) for task in entities["tasks"]]
+        tasks = [Task(**task) for task in tasks_data]
         
         # Determine start date
         start_date = request.start_date or datetime.utcnow().strftime("%Y-%m-%d")
@@ -40,7 +50,6 @@ async def generate_report(request: GenerateReportRequest):
         
         # Create and store plan
         plan_id = str(uuid.uuid4())
-        project_name = entities.get("project_name") or "Untitled Project"
         
         plan = Plan(
             plan_id=plan_id,

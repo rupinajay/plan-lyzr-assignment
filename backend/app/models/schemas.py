@@ -31,6 +31,7 @@ class ChatResponse(BaseModel):
 class GenerateReportRequest(BaseModel):
     session_id: str
     start_date: Optional[str] = None
+    tasks: Optional[List[dict]] = None  # Optional: use these tasks instead of session tasks
 
 
 class GenerateReportResponse(BaseModel):

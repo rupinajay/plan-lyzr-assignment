@@ -46,15 +46,35 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<"home" | "chat">("home");
   const router = useRouter();
 
-  // Load projects from localStorage on mount
+  // Load projects from localStorage on mount and handle projectId query param
   useEffect(() => {
     const saved = localStorage.getItem("recentProjects");
     if (saved) {
       try {
         const projects = JSON.parse(saved);
         setRecentProjects(projects);
-        // Show home view if there are projects
-        if (projects.length > 0) {
+        
+        // Check if there's a projectId in the URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get("projectId");
+        
+        if (projectId) {
+          // Load the specific project and switch to chat view
+          const project = projects.find((p: RecentProject) => p.id === projectId);
+          if (project) {
+            setCurrentProjectId(project.id);
+            setMessages(project.messages);
+            setTasks(project.tasks);
+            setProjectName(project.projectName);
+            setSessionId(project.sessionId);
+            setPlanId(null);
+            setStartDate("");
+            setViewMode("chat");
+            // Clean up the URL
+            window.history.replaceState({}, "", "/");
+          }
+        } else if (projects.length > 0) {
+          // Show home view if there are projects
           setViewMode("home");
         }
       } catch (e) {
@@ -142,6 +162,11 @@ export default function Home() {
       // Store tasks data in message for table rendering
       const taskCount = response.entities.tasks?.length || 0;
       
+      console.log("=== AI RESPONSE ===");
+      console.log("Response entities:", JSON.stringify(response.entities, null, 2));
+      console.log("Response message:", response.message);
+      console.log("==================");
+      
       if (taskCount > 0) {
         const messageData = {
           type: "tasks",
@@ -150,19 +175,36 @@ export default function Home() {
           count: taskCount,
         };
         
+        console.log("=== MESSAGE DATA TO STORE ===");
+        console.log(JSON.stringify(messageData, null, 2));
+        console.log("============================");
+        
+        // First show the AI's response message
         setMessages((prev) => [
           ...prev,
           { 
             role: "assistant", 
-            content: JSON.stringify(messageData)
+            content: response.message // ← Show AI's actual message!
           },
         ]);
+        
+        // Then show the task table
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { 
+              role: "assistant", 
+              content: JSON.stringify(messageData)
+            },
+          ]);
+        }, 100);
       } else {
+        // Use the AI's message from backend
         setMessages((prev) => [
           ...prev,
           { 
             role: "assistant", 
-            content: "I'm listening! Please describe your project tasks, timelines, and team members."
+            content: response.message // ← Use AI's actual message!
           },
         ]);
       }
@@ -188,14 +230,33 @@ export default function Home() {
     }
 
     setLoading(true);
+    
+    // Close modal first if it's open to force a refresh
+    setModalOpen(false);
 
     try {
-      const response = await generateReport(sessionId, startDate || undefined);
+      // Send the current tasks state (including any manual edits) to the backend
+      console.log("=== SENDING TO GENERATE REPORT ===");
+      console.log("Current tasks being sent:", tasks);
+      console.log("====================================");
+      
+      const response = await generateReport(sessionId, startDate || undefined, tasks);
+      
+      console.log("=== GENERATE REPORT RESPONSE ===");
+      console.log("Plan ID:", response.plan_id);
+      console.log("Tasks with dates:", JSON.stringify(response.tasks, null, 2));
+      console.log("================================");
+      
+      // Update state with new plan data
       setPlanId(response.plan_id);
       setTasks(response.tasks);
       setProjectName(response.project_name);
       setStartDate(response.start_date);
-      setModalOpen(true);
+      
+      // Small delay to ensure state updates, then open modal
+      setTimeout(() => {
+        setModalOpen(true);
+      }, 100);
 
       // Save planId to localStorage for current project
       if (currentProjectId) {
@@ -411,7 +472,7 @@ export default function Home() {
               <div className="mb-6">
                 <h2 className="text-2xl font-bold mb-2">Your Projects</h2>
                 <p className="text-muted-foreground">
-                  Click on a project to view its Kanban board
+                  Click on a project to view its Timeline, Kanban board and Project Tracker, or continue chatting about it.
                 </p>
               </div>
               

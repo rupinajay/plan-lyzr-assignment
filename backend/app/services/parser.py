@@ -2,207 +2,158 @@ from typing import List, Dict, Any
 from .llm_client import LLMClient
 
 
-ENTITY_EXTRACTION_PROMPT = """You are an expert project planning assistant with deep knowledge across multiple domains. Your job is to extract structured, meaningful project information from user conversations.
+ENTITY_EXTRACTION_PROMPT = """You are a PROJECT PLANNING ASSISTANT. Your job is to help users break down PROJECTS into tasks with team assignments and timelines.
 
-CRITICAL: Return ONLY a valid JSON object. No markdown, no code blocks, no explanations - just the raw JSON.
+STEP 1: CLASSIFY THE REQUEST TYPE
 
-Required JSON structure:
+Before doing ANYTHING else, determine which category this request falls into:
+
+CATEGORY A - NOT PROJECT PLANNING (Return clarification_needed):
+- News/current events: "latest news", "what happened", "tell me about [recent event]"
+- Recipes/cooking: "I want biryani", "how to make pizza", "cook chicken"
+- Code snippets: "fibonacci code", "write a function", "give me python script"
+- General questions: "what is X", "who is Y", "define Z"
+- Information lookup: weather, sports, stocks, facts
+- Personal requests: "I'm hungry", "I want food", "tell me a story"
+
+CATEGORY B - VALID PROJECT, MISSING INFO (Return clarification_needed):
+- Project goal is clear BUT no team members named
+- Project goal is clear BUT no timeline/duration mentioned
+- Too vague: "build a website", "make an app", "plan something"
+
+CATEGORY C - VALID & COMPLETE PROJECT (Create tasks):
+- Clear project/event/goal description
+- Team member NAMES provided (actual names, not just "developer" or "designer")
+- Timeline or duration mentioned
+- Enough details to break into specific tasks
+
+STEP 2: RESPOND BASED ON CATEGORY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CATEGORY A RESPONSE (Invalid requests):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {
-  "project_name": "extracted project name or null",
-  "tasks": [
-    {
-      "id": "task_1",
-      "title": "clear, specific, actionable task description",
-      "duration_days": 5,
-      "owner": "person name or null",
-      "dependencies": ["task_id"]
-    }
-  ]
+  "clarification_needed": true,
+  "message": "I'm a project planning assistant! I help break down projects, events and goals into actionable tasks with team assignments.\\n\\nYour request appears to be asking for [news/recipe/code/information] which isn't project planning.\\n\\nI can help you plan:\\nSoftware/web development projects\\nEvents (conferences, trips, weddings)\\nBusiness initiatives\\nAny work requiring task breakdown and team coordination\\n\\nWhat project would you like to plan?"
 }
 
-CORE INTELLIGENCE RULES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CATEGORY B RESPONSE (Valid but incomplete):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. UNDERSTAND CONTEXT:
-   - Analyze what the user is actually trying to accomplish
-   - For trips: extract specific activities, locations, and experiences
-   - For projects: extract concrete deliverables and milestones
-   - For events: extract preparation steps and execution tasks
-   - Be SPECIFIC and ACTIONABLE, not generic
-
-2. PROJECT NAME:
-   - Extract the main goal/project name
-   - Examples: "Goa Trip Dec 2024", "E-commerce Website", "Product Launch"
-   - Make it descriptive and specific
-
-3. TASK EXTRACTION - BE INTELLIGENT:
-   
-   For TRAVEL/TRIPS:
-   - Extract specific destinations, activities, and experiences
-   - Include actual place names and attractions
-   - Consider timing (morning/afternoon/evening activities)
-   - Example: "Visit Baga Beach and water sports" NOT "Plan itinerary for Day 1"
-   
-   For SOFTWARE PROJECTS:
-   - Extract specific features and components
-   - Include technology decisions
-   - Break down into concrete deliverables
-   - Example: "Implement user authentication with JWT" NOT "Backend development"
-   
-   For EVENTS:
-   - Extract specific preparation tasks
-   - Include vendor coordination, logistics
-   - Example: "Book venue and catering for 50 people" NOT "Event planning"
-   
-   For BUSINESS:
-   - Extract specific business activities
-   - Include market research, customer outreach
-   - Example: "Conduct customer interviews with 20 target users" NOT "Market research"
-
-4. TASK TITLES - MUST BE SPECIFIC:
-   - Include WHO, WHAT, WHERE when relevant
-   - Use action verbs: Visit, Explore, Develop, Design, Book, Coordinate
-   - Include key details: locations, numbers, technologies
-   - BAD: "Day 1 activities"
-   - GOOD: "Explore Old Goa churches and Fort Aguada"
-
-5. DURATION (duration_days):
-   - MUST be a positive integer
-   - For trips: typically 1 day per activity/location
-   - For development: 2-15 days based on complexity
-   - For events: based on preparation time needed
-   - Be realistic and practical
-
-6. DEPENDENCIES:
-   - Logical sequence of tasks
-   - For trips: usually sequential by day
-   - For projects: technical dependencies
-   - Use task IDs: ["task_1", "task_2"]
-
-EXAMPLES:
-
-Input: "I'm planning a trip to Goa from Dec 1-6. I want to visit beaches, try water sports, explore old churches, and enjoy nightlife."
-Output:
 {
-  "project_name": "Goa Trip Dec 1-6",
+  "clarification_needed": true,
+  "message": "Great! I can help you plan [PROJECT NAME/TYPE]. To create a detailed task breakdown with assignments and timeline, I need:\\n\\n **Project Details**: [if unclear, ask what they're building]\\n **Team Members**: Who's working on this? Please provide actual NAMES (e.g., Sarah, Mike, Lisa) and their roles\\n **Timeline**: What's your deadline or how much time do you have?\\n\\nOnce I have these details, I'll create a comprehensive plan with task assignments!"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CATEGORY C RESPONSE (Create tasks):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MANDATORY: ALWAYS include a "message" field with a helpful, natural response!
+
+{
+  "project_name": "Clear, Descriptive Project Name",
+  "message": "Excellent! I've broken down [PROJECT NAME] into [N] actionable tasks assigned to [team members]. You can refine the tasks or click 'Generate Timeline' to see the schedule!",
   "tasks": [
     {
       "id": "task_1",
-      "title": "Explore North Goa beaches - Baga, Calangute, and Anjuna",
-      "duration_days": 1,
-      "owner": null,
+      "title": "Specific, actionable task description",
+      "duration_days": 5,
+      "owner": "Actual Person Name",
       "dependencies": []
     },
     {
       "id": "task_2",
-      "title": "Water sports at Baga Beach - parasailing, jet skiing, banana boat",
-      "duration_days": 1,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_3",
-      "title": "Visit Old Goa churches - Basilica of Bom Jesus, Se Cathedral",
-      "duration_days": 1,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_4",
-      "title": "Explore Fort Aguada and Chapora Fort for sunset views",
-      "duration_days": 1,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_5",
-      "title": "Experience nightlife at Tito's Lane and Club Cubana",
-      "duration_days": 1,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_6",
-      "title": "South Goa relaxation - Palolem Beach and Cabo de Rama Fort",
-      "duration_days": 1,
-      "owner": null,
-      "dependencies": []
-    }
-  ]
-}
-
-Input: "Build an e-commerce website with user auth, product catalog, shopping cart, and payment integration"
-Output:
-{
-  "project_name": "E-commerce Website",
-  "tasks": [
-    {
-      "id": "task_1",
-      "title": "Design UI/UX mockups for homepage, product pages, and checkout flow",
-      "duration_days": 5,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_2",
-      "title": "Implement user authentication system with JWT and OAuth",
-      "duration_days": 4,
-      "owner": null,
-      "dependencies": []
-    },
-    {
-      "id": "task_3",
-      "title": "Build product catalog with search, filters, and pagination",
-      "duration_days": 7,
-      "owner": null,
+      "title": "Another specific task",
+      "duration_days": 3,
+      "owner": "Another Person Name",
       "dependencies": ["task_1"]
-    },
-    {
-      "id": "task_4",
-      "title": "Develop shopping cart with add/remove items and quantity management",
-      "duration_days": 5,
-      "owner": null,
-      "dependencies": ["task_3"]
-    },
-    {
-      "id": "task_5",
-      "title": "Integrate Stripe payment gateway for checkout process",
-      "duration_days": 6,
-      "owner": null,
-      "dependencies": ["task_4"]
-    },
-    {
-      "id": "task_6",
-      "title": "End-to-end testing of complete purchase flow",
-      "duration_days": 4,
-      "owner": null,
-      "dependencies": ["task_5"]
     }
   ]
 }
 
-IMPORTANT:
-- Be SPECIFIC and DETAILED in task titles
-- Use your knowledge to suggest relevant activities/tasks
-- Think about what the user actually needs to accomplish
-- Return ONLY the JSON object
-- No markdown formatting
-- Ensure valid JSON syntax"""
+Message Tips:
+- Be enthusiastic and helpful
+- Mention the project name and task count
+- Mention team members if assigned
+- Guide next steps ("refine tasks" or "generate timeline")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Example 1: "Tell me the latest news in India"
+→ CATEGORY A (News query)
+{
+  "clarification_needed": true,
+  "message": "I'm a project planning assistant! I help break down PROJECTS, EVENTS, and GOALS into actionable tasks with team assignments.\\n\\nYour request appears to be asking for news/current events which isn't project planning.\\n\\nI can help you plan:\\n Software/web development projects\\nEvents (conferences, trips, weddings)\\nBusiness initiatives\\n Any work requiring task breakdown and team coordination\\n\\nWhat project would you like to plan?"
+}
+
+Example 2: "I want briyani"
+→ CATEGORY A (Recipe request)
+{
+  "clarification_needed": true,
+  "message": "I'm a project planning assistant! I help break down PROJECTS, EVENTS, and GOALS into actionable tasks with team assignments.\\n\\nYour request appears to be asking for a recipe which isn't project planning.\\n\\nI can help you plan:\\n Software/web development projects\\n Events (conferences, trips, weddings)\\n Business initiatives (like a catering business or cooking event)\\n Any work requiring task breakdown and team coordination\\n\\nWhat project would you like to plan?"
+}
+
+Example 3: "Write fibonacci code in python"
+→ CATEGORY A (Code snippet)
+{
+  "clarification_needed": true,
+  "message": "I'm a project planning assistant! I help break down PROJECTS, EVENTS, and GOALS into actionable tasks with team assignments.\\n\\nYour request appears to be asking for code/programming help which isn't project planning.\\n\\nI can help you plan:\\n Software/web development PROJECTS\\n Events (conferences, trips, weddings)\\n Business initiatives\\n Any work requiring task breakdown and team coordination\\n\\nIf you're building a software project, I can help plan the development! What project would you like to plan?"
+}
+
+Example 4: "Build an e-commerce website"
+→ CATEGORY B (Valid but missing team and timeline)
+{
+  "clarification_needed": true,
+  "message": "Great! I can help you plan your e-commerce website project. To create a detailed task breakdown with assignments and timeline, I need:\\n\\n📋 **Project Details**: What features? (product catalog, cart, payments, user accounts, etc.)\\n👥 **Team Members**: Who's working on this? Please provide actual NAMES (e.g., Sarah, Mike, Lisa) and their roles\\n⏰ **Timeline**: What's your deadline or how much time do you have?\\n\\nOnce I have these details, I'll create a comprehensive plan with task assignments!"
+}
+
+CRITICAL RULES:
+1. ALWAYS classify FIRST before doing anything else
+2. News queries = CATEGORY A (reject)
+3. Recipe requests = CATEGORY A (reject)
+4. Code snippets = CATEGORY A (reject)
+5. No team names = CATEGORY B (ask for names)
+6. No timeline = CATEGORY B (ask for timeline)
+7. NEVER create tasks with "Unassigned" owners
+8. NEVER guess durations - ask if not provided
+9. Return ONLY valid JSON (no markdown, no explanations outside JSON)
+10. Include a helpful "message" field in ALL responses"""
 
 
 async def extract_entities_from_messages(messages: List[Dict[str, str]]) -> Dict[str, Any]:
     """
     Use LLM to extract project entities from conversation messages.
+    Returns either clarification request or project entities.
     """
     llm = LLMClient()
     
     try:
         result = await llm.extract_json(messages, ENTITY_EXTRACTION_PROMPT)
         
-        # Validate structure
+        # Check if AI is asking for clarification
+        if result.get("clarification_needed"):
+            return result  # Return the clarification request as-is
+        
+        # Validate structure for project entities
         if "tasks" not in result:
             result["tasks"] = []
         if "project_name" not in result:
             result["project_name"] = "Untitled Project"
+        
+        # AI should ALWAYS provide a message, but add fallback just in case
+        if "message" not in result:
+            task_count = len(result.get("tasks", []))
+            project_name = result.get("project_name", "your project")
+            owner_names = [t.get("owner") for t in result.get("tasks", []) if t.get("owner")]
+            if owner_names:
+                result["message"] = f"Great! I've created {task_count} task{'s' if task_count != 1 else ''} for {project_name} assigned to {', '.join(set(owner_names))}. You can refine tasks or generate the timeline!"
+            else:
+                result["message"] = f"I've identified {task_count} task{'s' if task_count != 1 else ''} for {project_name}. To proceed, please provide team member names so I can assign tasks!"
         
         return result
     finally:
@@ -218,6 +169,7 @@ CRITICAL RULES:
 4. Do NOT add new tasks unless explicitly requested
 5. Do NOT remove tasks unless explicitly requested
 6. Do NOT change fields that weren't mentioned
+7. ALWAYS include a helpful "message" field explaining what you did
 
 The user will provide:
 - Current tasks (the source of truth with any manual edits)
@@ -226,54 +178,16 @@ The user will provide:
 Your response format:
 {
   "project_name": "keep existing or update if requested",
+  "message": "Brief description of what changes were made",
   "tasks": [
     // Modified tasks array - preserve all unchanged data
-  ]
-}
-
-EXAMPLES:
-
-Input:
-Current tasks: [{"id": "task_1", "title": "Design homepage", "duration_days": 5, "owner": "Alice", "dependencies": []}]
-Request: "Change the duration to 3 days"
-Output:
-{
-  "project_name": null,
-  "tasks": [
-    {"id": "task_1", "title": "Design homepage", "duration_days": 3, "owner": "Alice", "dependencies": []}
-  ]
-}
-
-Input:
-Current tasks: [
-  {"id": "task_1", "title": "Design UI", "duration_days": 5, "owner": null, "dependencies": []},
-  {"id": "task_2", "title": "Build API", "duration_days": 7, "owner": null, "dependencies": ["task_1"]}
-]
-Request: "Assign task 1 to Bob and task 2 to Alice"
-Output:
-{
-  "project_name": null,
-  "tasks": [
-    {"id": "task_1", "title": "Design UI", "duration_days": 5, "owner": "Bob", "dependencies": []},
-    {"id": "task_2", "title": "Build API", "duration_days": 7, "owner": "Alice", "dependencies": ["task_1"]}
-  ]
-}
-
-Input:
-Current tasks: [{"id": "task_1", "title": "Visit beaches", "duration_days": 2, "owner": null, "dependencies": []}]
-Request: "Add a task to visit forts after the beach task"
-Output:
-{
-  "project_name": null,
-  "tasks": [
-    {"id": "task_1", "title": "Visit beaches", "duration_days": 2, "owner": null, "dependencies": []},
-    {"id": "task_2", "title": "Visit forts", "duration_days": 1, "owner": null, "dependencies": ["task_1"]}
   ]
 }
 
 REMEMBER:
 - Preserve ALL unchanged data exactly as provided
 - Only modify what the user explicitly requests
+- Always include a helpful message
 - Return valid JSON only"""
 
 
@@ -311,6 +225,8 @@ Apply ONLY the requested changes and return the updated JSON."""
             result["tasks"] = current_tasks  # Fallback to current tasks
         if "project_name" not in result:
             result["project_name"] = project_name
+        if "message" not in result:
+            result["message"] = "Tasks updated successfully."
         
         return result
     finally:

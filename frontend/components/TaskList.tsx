@@ -14,6 +14,19 @@ export function TaskList({ tasks, projectName }: TaskListProps) {
     return null;
   }
 
+  // Calculate actual duration from dates if available
+  const getActualDuration = (task: Task) => {
+    if (task.start_date && task.end_date) {
+      const start = new Date(task.start_date);
+      const end = new Date(task.end_date);
+      const duration = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return duration;
+    }
+    return task.duration_days;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -31,7 +44,7 @@ export function TaskList({ tasks, projectName }: TaskListProps) {
                   <h4 className="font-medium text-sm">{task.title}</h4>
                   <div className="flex gap-2 mt-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
-                      {task.duration_days} days
+                      {getActualDuration(task)} days
                     </Badge>
                     {task.owner && (
                       <Badge variant="outline" className="text-xs">

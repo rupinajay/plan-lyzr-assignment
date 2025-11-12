@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Edit2, Save } from "lucide-react";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -164,6 +165,10 @@ export function ChatMessage({ role, content, onTasksUpdate }: ChatMessageProps &
     const parsed = JSON.parse(content);
     if (parsed.type === "tasks") {
       messageData = parsed;
+      // Log the tasks data to see what we're receiving
+      console.log("=== CHAT MESSAGE TASKS DATA ===");
+      console.log("Tasks received:", JSON.stringify(parsed.tasks, null, 2));
+      console.log("================================");
     }
   } catch {
     // Not JSON, treat as regular text
@@ -194,8 +199,31 @@ export function ChatMessage({ role, content, onTasksUpdate }: ChatMessageProps &
             : "bg-muted text-foreground"
         )}
       >
-        <div className="text-sm leading-relaxed whitespace-pre-wrap">
-          {content}
+        <div className="text-sm leading-relaxed markdown-content">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+              li: ({ children }) => <li>{children}</li>,
+              strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+              em: ({ children }) => <em className="italic">{children}</em>,
+              a: ({ children, href }) => (
+                <a href={href} className="underline hover:opacity-80" target="_blank" rel="noopener noreferrer">
+                  {children}
+                </a>
+              ),
+              code: ({ children }) => (
+                <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs">
+                  {children}
+                </code>
+              ),
+              br: () => <br />,
+            }}
+          >
+            {/* Convert single newlines to double newlines for proper Markdown paragraph rendering */}
+            {content.replace(/\n/g, '\n\n')}
+          </ReactMarkdown>
         </div>
       </div>
     </div>

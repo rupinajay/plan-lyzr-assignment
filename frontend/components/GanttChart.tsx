@@ -20,7 +20,7 @@ interface FrappeTask {
 export function GanttChart({ items }: GanttChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<any>(null);
-  const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month">("Week");
+  const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month">("Day"); // Default to Day view
 
   useEffect(() => {
     if (!containerRef.current || items.length === 0) return;
@@ -33,14 +33,22 @@ export function GanttChart({ items }: GanttChartProps) {
       return acc;
     }, {} as Record<string, GanttItem[]>);
 
-    // Convert items to Frappe Gantt format with better naming
+    // Convert items to Frappe Gantt format with duration labels
     const tasks: FrappeTask[] = [];
     Object.entries(groupedItems).forEach(([owner, ownerItems]) => {
       ownerItems.forEach((item, index) => {
         const colorClass = getColorClass(owner);
+        
+        // Calculate duration in days
+        const start = new Date(item.start);
+        const end = new Date(item.end);
+        const duration = Math.ceil(
+          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
         tasks.push({
           id: `${owner}-${index}`,
-          name: item.content,
+          name: `${item.content} (${duration}d)`, // Add duration to task name
           start: item.start,
           end: item.end,
           progress: 0,
@@ -54,16 +62,19 @@ export function GanttChart({ items }: GanttChartProps) {
       ganttRef.current = null;
     }
 
-    // Create new gantt instance
+    // Create new gantt instance with better spacing for Day view
     try {
       ganttRef.current = new Gantt(containerRef.current, tasks, {
         view_mode: viewMode,
-        bar_height: 40,
+        bar_height: 50, // Increased height for better visibility
         bar_corner_radius: 8,
         arrow_curve: 5,
-        padding: 20,
+        padding: 24, // More padding
         date_format: "YYYY-MM-DD",
         language: "en",
+        ...(viewMode === "Day" ? { column_width: 80 } : 
+           viewMode === "Week" ? { column_width: 50 } : 
+           { column_width: 40 } as any), // Increased gap between days
         custom_popup_html: (task: any) => {
           const start = new Date(task._start);
           const end = new Date(task._end);

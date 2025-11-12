@@ -38,11 +38,28 @@ export function GanttModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Convert tasks to gantt items whenever tasks prop changes
   useEffect(() => {
-    if (open && planId) {
+    if (tasks.length > 0 && tasks[0].start_date && tasks[0].end_date) {
+      // Tasks have dates, convert them directly to gantt items
+      const items: GanttItem[] = tasks.map(task => ({
+        id: task.id,
+        content: task.title,
+        start: task.start_date!,
+        end: task.end_date!,
+        group: task.owner || "Unassigned"
+      }));
+      setGanttItems(items);
+      setLoading(false);
+      setError(null);
+    } else if (open && planId) {
+      // Tasks don't have dates yet, fetch from backend
+      console.log("=== GANTT MODAL LOADING ===");
+      console.log("Plan ID:", planId);
+      console.log("===========================");
       loadGanttData();
     }
-  }, [open, planId]);
+  }, [tasks, open, planId]);
 
   const loadGanttData = async () => {
     if (!planId) return;
@@ -51,9 +68,12 @@ export function GanttModal({
     setError(null);
 
     try {
+      console.log("Fetching Gantt data for plan:", planId);
       const data = await getGanttData(planId);
+      console.log("Received Gantt items:", data);
       setGanttItems(data);
     } catch (err) {
+      console.error("Error loading Gantt data:", err);
       setError(err instanceof Error ? err.message : "Failed to load chart data");
     } finally {
       setLoading(false);

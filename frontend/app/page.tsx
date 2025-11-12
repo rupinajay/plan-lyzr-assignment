@@ -458,7 +458,7 @@ export default function Home() {
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1" />
           <ThemeToggle />
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => router.push("/docs")}>
             <BookOpen className="h-4 w-4" />
             Docs
           </Button>

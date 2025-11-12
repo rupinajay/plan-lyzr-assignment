@@ -202,13 +202,13 @@ GET /api/health
 
 ## Security Best Practices
 
-✅ API keys in environment variables only  
-✅ Input validation via Pydantic  
-✅ Rate limiting on endpoints  
-✅ CORS configured for specific origins  
-✅ HTTPS in production  
-✅ No secrets in git repository  
-✅ Max message length enforced  
+ API keys in environment variables only  
+ Input validation via Pydantic  
+ Rate limiting on endpoints  
+ CORS configured for specific origins  
+ HTTPS in production  
+ No secrets in git repository  
+ Max message length enforced  
 
 ## Project Structure
 

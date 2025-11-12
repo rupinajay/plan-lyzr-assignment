@@ -30,10 +30,11 @@ origins = os.getenv("CORS_ORIGINS", "https://plan.rupinajay.me,http://localhost:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if origins[0] == "*" else origins,
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Accept"],
+    max_age=3600,
 )
 
 # Include routers

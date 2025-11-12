@@ -616,6 +616,93 @@ export default function DocsPage() {
             </div>
           </section>
 
+          {/* Production Readiness */}
+          <section className="space-y-6">
+            <h2 className="text-3xl font-bold tracking-tight">Production Readiness</h2>
+            <Card className="border-amber-500/50 bg-amber-500/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-6 w-6 text-amber-500" />
+                  Before Going to Production
+                </CardTitle>
+                <CardDescription>
+                  This application requires several security enhancements before production deployment
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-red-600 dark:text-red-400">🔴 Critical (Must Fix)</h4>
+                    <ul className="text-sm space-y-1 pl-4">
+                      <li>• <strong>Add Authentication/Authorization:</strong> Implement JWT-based authentication to protect API endpoints and associate sessions with users</li>
+                      <li>• <strong>Apply Rate Limiting:</strong> Add rate limit decorators to all API endpoints (currently configured but not applied)</li>
+                      <li>• <strong>Implement Persistent Storage:</strong> Replace in-memory storage with PostgreSQL or MongoDB to prevent data loss on restart</li>
+                      <li>• <strong>Add Input Sanitization:</strong> Implement prompt injection detection and sanitization for LLM inputs</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-orange-600 dark:text-orange-400">🟠 High Priority</h4>
+                    <ul className="text-sm space-y-1 pl-4">
+                      <li>• <strong>Validate API Keys on Startup:</strong> Fail fast if critical environment variables are missing</li>
+                      <li>• <strong>Add Request/Response Logging:</strong> Implement comprehensive audit logging without exposing sensitive data</li>
+                      <li>• <strong>Sanitize Error Responses:</strong> Prevent internal error details from leaking to users</li>
+                      <li>• <strong>Enforce HTTPS:</strong> Validate that production deployments only use HTTPS</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-yellow-600 dark:text-yellow-400">🟡 Medium Priority</h4>
+                    <ul className="text-sm space-y-1 pl-4">
+                      <li>• <strong>Add Security Headers:</strong> Implement X-Content-Type-Options, X-Frame-Options, CSP</li>
+                      <li>• <strong>Set Up Monitoring:</strong> Add error tracking (Sentry) and performance monitoring</li>
+                      <li>• <strong>Implement Request ID Tracking:</strong> Add unique request IDs for debugging and support</li>
+                      <li>• <strong>Add Health Check Endpoints:</strong> Implement comprehensive health checks for dependencies</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 space-y-3">
+                  <h4 className="font-semibold">Recommended Implementation Timeline</h4>
+                  <div className="grid gap-3 text-sm">
+                    <div className="flex gap-3">
+                      <span className="font-mono text-muted-foreground min-w-[80px]">Week 1:</span>
+                      <span>Add authentication, apply rate limiting, implement persistent storage</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="font-mono text-muted-foreground min-w-[80px]">Week 2:</span>
+                      <span>Input sanitization, logging, error handling improvements</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="font-mono text-muted-foreground min-w-[80px]">Week 3:</span>
+                      <span>Security headers, monitoring setup, testing and validation</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-muted rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold text-sm">Environment Variables Required</h4>
+                  <div className="font-mono text-xs space-y-1">
+                    <p className="text-muted-foreground"># Backend (.env)</p>
+                    <p>LLM_BASE_URL=https://api.groq.com/openai/v1</p>
+                    <p>LLM_API_KEY=gsk_your_groq_api_key</p>
+                    <p>CORS_ORIGINS=https://yourdomain.com</p>
+                    <p>DATABASE_URL=postgresql://...</p>
+                    <p>JWT_SECRET=your_jwt_secret</p>
+                    <p className="mt-2 text-muted-foreground"># Frontend (.env.local)</p>
+                    <p>NEXT_PUBLIC_API_BASE=https://api.yourdomain.com</p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    For a complete security audit and implementation guide, see <code className="bg-muted px-1 py-0.5 rounded">SECURITY_AUDIT.md</code> in the repository.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           {/* Footer */}
           <section className="border-t pt-12 pb-8">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">

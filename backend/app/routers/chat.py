@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse, Response
 from ..models.schemas import ChatRequest, ChatResponse
 from ..storage import get_session
 from ..services.parser import extract_entities_from_messages, merge_entities
+import json
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -78,3 +80,103 @@ async def chat(request: ChatRequest):
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing chat: {str(e)}")
+
+
+@router.options("/chat/stream")
+async def chat_stream_options():
+    """Handle CORS preflight for streaming endpoint"""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
+        }
+    )
+
+
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """
+    Streaming version of chat endpoint.
+    Returns Server-Sent Events (SSE) for real-time streaming.
+    """
+    try:
+        # Get or create session
+        session = get_session(request.session_id)
+        
+        # Append user message
+        session.append_message(request.text)
+        
+        async def generate():
+            try:
+                # For now, we'll extract entities first (non-streaming)
+                # Then stream the message response
+                from ..services.llm_client import LLMClient
+                from ..services.parser import ENTITY_EXTRACTION_PROMPT
+                
+                llm = LLMClient()
+                
+                # Check if modification or initial extraction
+                if request.current_tasks is not None and len(request.current_tasks) > 0:
+                    # Modification request
+                    from ..services.parser import modify_tasks
+                    current_project_name = session.entities.get("project_name")
+                    new_entities = await modify_tasks(
+                        request.current_tasks,
+                        request.text,
+                        current_project_name
+                    )
+                    session.update_entities(new_entities)
+                    message = new_entities.get("message", "Tasks updated!")
+                    
+                    # Stream the response
+                    for char in message:
+                        yield f"data: {json.dumps({'type': 'message', 'content': char})}\n\n"
+                    
+                    # Send final entities
+                    yield f"data: {json.dumps({'type': 'entities', 'data': new_entities, 'session_id': session.id})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                    
+                else:
+                    # Initial extraction
+                    new_entities = await extract_entities_from_messages(session.messages)
+                    
+                    # Check for clarification
+                    if new_entities.get("clarification_needed"):
+                        message = new_entities.get("message", "I need more information.")
+                        for char in message:
+                            yield f"data: {json.dumps({'type': 'message', 'content': char})}\n\n"
+                        yield f"data: {json.dumps({'type': 'entities', 'data': session.entities, 'session_id': session.id})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                    else:
+                        # Merge entities
+                        merged_entities = merge_entities(session.entities, new_entities)
+                        session.update_entities(merged_entities)
+                        
+                        # Stream message
+                        message = new_entities.get("message", "I'm ready to help!")
+                        for char in message:
+                            yield f"data: {json.dumps({'type': 'message', 'content': char})}\n\n"
+                        
+                        # Send final entities
+                        yield f"data: {json.dumps({'type': 'entities', 'data': merged_entities, 'session_id': session.id})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                
+                await llm.close()
+                
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing chat stream: {str(e)}")

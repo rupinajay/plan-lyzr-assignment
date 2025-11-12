@@ -19,7 +19,7 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("LLM_API_KEY must be set in environment variables")
     
-    async def chat(self, messages: List[Dict[str, str]], model: str = "openai/gpt-oss-20b") -> Dict[str, Any]:
+    async def chat(self, messages: List[Dict[str, str]], model: str = "openai/gpt-oss-20b", stream: bool = False) -> Dict[str, Any]:
         """
         Generic chat endpoint: provider-agnostic request builder.
         For GROQ, uses their OpenAI-compatible endpoint.
@@ -34,13 +34,18 @@ class LLMClient:
             "messages": messages,
             "temperature": 0.3,  # Lower temperature for more focused, accurate extraction
             "max_tokens": 3000,  # More tokens for detailed responses
-            "top_p": 0.9
+            "top_p": 0.9,
+            "stream": stream
         }
         
         try:
-            resp = await self.client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            return resp.json()
+            if stream:
+                # Return the response object for streaming
+                return await self.client.post(url, json=payload, headers=headers)
+            else:
+                resp = await self.client.post(url, json=payload, headers=headers)
+                resp.raise_for_status()
+                return resp.json()
         except httpx.HTTPStatusError as e:
             # Get detailed error message from response
             error_detail = "Unknown error"

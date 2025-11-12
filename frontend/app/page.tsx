@@ -11,7 +11,7 @@ import { GanttModal } from "@/components/GanttModal";
 import { ProjectCard } from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { postChat, generateReport, Task } from "@/lib/api";
+import { postChat, postChatStream, generateReport, Task } from "@/lib/api";
 import { Calendar, Loader2, BookOpen } from "lucide-react";
 
 interface Message {
@@ -122,92 +122,98 @@ export default function Home() {
     try {
       // Send current tasks if they exist (for modification requests)
       const currentTasks = tasks.length > 0 ? tasks : undefined;
-      const response = await postChat(sessionId, text, currentTasks);
       
-      // Update session ID
-      if (!sessionId) {
-        setSessionId(response.session_id);
-      }
+      // Add placeholder for assistant message that will be streamed
+      const assistantMessageIndex = messages.length + 1;
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      
+      let streamedMessage = "";
+      
+      await postChatStream(
+        sessionId,
+        text,
+        // onMessage callback - streams character by character
+        (chunk: string) => {
+          streamedMessage += chunk;
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            newMessages[assistantMessageIndex] = { role: "assistant", content: streamedMessage };
+            return newMessages;
+          });
+        },
+        // onEntities callback - called when entity extraction complete
+        (entities: any, newSessionId: string) => {
+          // Update session ID
+          if (!sessionId) {
+            setSessionId(newSessionId);
+          }
 
-      // Update tasks and project name
-      if (response.entities.tasks) {
-        setTasks(response.entities.tasks);
-      }
-      
-      // Only set project name if it hasn't been set yet (first extraction only)
-      if (response.entities.project_name && !projectName) {
-        setProjectName(response.entities.project_name);
-        
-        // Update project name in sidebar if AI extracted one for the first time
-        if (currentProjectId) {
-          const updatedProjects = recentProjects.map(p => 
-            p.id === currentProjectId 
-              ? { ...p, projectName: response.entities.project_name, sessionId: response.session_id, tasks: response.entities.tasks || p.tasks }
-              : p
-          );
-          setRecentProjects(updatedProjects);
-          localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
-        }
-      } else if (response.entities.tasks && currentProjectId) {
-        // If project name already exists, just update tasks without changing the name
-        const updatedProjects = recentProjects.map(p => 
-          p.id === currentProjectId 
-            ? { ...p, sessionId: response.session_id, tasks: response.entities.tasks || p.tasks }
-            : p
-        );
-        setRecentProjects(updatedProjects);
-        localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
-      }
+          // Update tasks and project name
+          if (entities.tasks) {
+            setTasks(entities.tasks);
+          }
+          
+          // Only set project name if it hasn't been set yet (first extraction only)
+          if (entities.project_name && !projectName) {
+            setProjectName(entities.project_name);
+            
+            // Update project name in sidebar if AI extracted one for the first time
+            if (currentProjectId) {
+              const updatedProjects = recentProjects.map(p => 
+                p.id === currentProjectId 
+                  ? { ...p, projectName: entities.project_name, sessionId: newSessionId, tasks: entities.tasks || p.tasks }
+                  : p
+              );
+              setRecentProjects(updatedProjects);
+              localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
+            }
+          } else if (entities.tasks && currentProjectId) {
+            // If project name already exists, just update tasks without changing the name
+            const updatedProjects = recentProjects.map(p => 
+              p.id === currentProjectId 
+                ? { ...p, sessionId: newSessionId, tasks: entities.tasks || p.tasks }
+                : p
+            );
+            setRecentProjects(updatedProjects);
+            localStorage.setItem("recentProjects", JSON.stringify(updatedProjects));
+          }
 
-      // Store tasks data in message for table rendering
-      const taskCount = response.entities.tasks?.length || 0;
-      
-      console.log("=== AI RESPONSE ===");
-      console.log("Response entities:", JSON.stringify(response.entities, null, 2));
-      console.log("Response message:", response.message);
-      console.log("==================");
-      
-      if (taskCount > 0) {
-        const messageData = {
-          type: "tasks",
-          projectName: response.entities.project_name,
-          tasks: response.entities.tasks,
-          count: taskCount,
-        };
-        
-        console.log("=== MESSAGE DATA TO STORE ===");
-        console.log(JSON.stringify(messageData, null, 2));
-        console.log("============================");
-        
-        // First show the AI's response message
-        setMessages((prev) => [
-          ...prev,
-          { 
-            role: "assistant", 
-            content: response.message // ← Show AI's actual message!
-          },
-        ]);
-        
-        // Then show the task table
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            { 
+          // Store tasks data in message for table rendering
+          const taskCount = entities.tasks?.length || 0;
+          
+          if (taskCount > 0) {
+            const messageData = {
+              type: "tasks",
+              projectName: entities.project_name,
+              tasks: entities.tasks,
+              count: taskCount,
+            };
+            
+            // Show the task table after message completes
+            setTimeout(() => {
+              setMessages((prev) => [
+                ...prev,
+                { 
+                  role: "assistant", 
+                  content: JSON.stringify(messageData)
+                },
+              ]);
+            }, 100);
+          }
+        },
+        // onError callback
+        (error: string) => {
+          setMessages((prev) => {
+            const newMessages = [...prev];
+            newMessages[assistantMessageIndex] = { 
               role: "assistant", 
-              content: JSON.stringify(messageData)
-            },
-          ]);
-        }, 100);
-      } else {
-        // Use the AI's message from backend
-        setMessages((prev) => [
-          ...prev,
-          { 
-            role: "assistant", 
-            content: response.message // ← Use AI's actual message!
-          },
-        ]);
-      }
+              content: `Error: ${error}` 
+            };
+            return newMessages;
+          });
+        },
+        currentTasks // current tasks for modifications
+      );
     } catch (error) {
       setMessages((prev) => [
         ...prev,

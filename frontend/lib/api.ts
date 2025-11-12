@@ -73,6 +73,72 @@ export async function postChat(
   return res.json();
 }
 
+export async function postChatStream(
+  sessionId: string | null,
+  text: string,
+  onMessage: (chunk: string) => void,
+  onEntities: (entities: any, sessionId: string) => void,
+  onError: (error: string) => void,
+  currentTasks?: Task[]
+): Promise<void> {
+  try {
+    const res = await fetch(`${API_BASE}/api/chat/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        session_id: sessionId, 
+        text,
+        current_tasks: currentTasks 
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: "Chat failed" }));
+      throw new Error(error.detail || "Chat request failed");
+    }
+
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      throw new Error("No response body");
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          try {
+            const parsed = JSON.parse(data);
+            
+            if (parsed.type === 'message') {
+              onMessage(parsed.content);
+            } else if (parsed.type === 'entities') {
+              onEntities(parsed.data, parsed.session_id);
+            } else if (parsed.type === 'error') {
+              onError(parsed.message);
+            } else if (parsed.type === 'done') {
+              // Stream complete
+              break;
+            }
+          } catch (e) {
+            // Skip invalid JSON
+            console.warn('Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    onError(error instanceof Error ? error.message : "Stream failed");
+  }
+}
+
 export async function generateReport(
   sessionId: string,
   startDate?: string,

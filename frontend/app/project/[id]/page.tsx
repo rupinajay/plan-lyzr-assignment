@@ -53,12 +53,22 @@ export default function ProjectPage() {
     const currentProject = projects.find((p: any) => p.id === params.id);
     
     if (currentProject) {
+      console.log("=== LOADING PROJECT DATA ===");
+      console.log("Current Project:", currentProject);
+      console.log("Plan ID:", currentProject.planId);
+      console.log("Start Date:", currentProject.startDate);
+      console.log("End Date:", currentProject.endDate);
+      console.log("===========================");
+      
       setProject({
         id: currentProject.id,
         name: currentProject.projectName || currentProject.name,
         tasks: currentProject.tasks || [],
         sessionId: currentProject.sessionId,
-        projectName: currentProject.projectName
+        projectName: currentProject.projectName,
+        planId: currentProject.planId,
+        startDate: currentProject.startDate,
+        endDate: currentProject.endDate
       });
       
       // Load existing timeline data if available
@@ -68,11 +78,26 @@ export default function ProjectPage() {
         setEndDate(currentProject.endDate || "");
         
         // Load Gantt data
-        if (currentProject.planId) {
-          getGanttData(currentProject.planId)
-            .then(data => setGanttItems(data))
-            .catch(err => console.error("Failed to load Gantt data:", err));
-        }
+        getGanttData(currentProject.planId)
+          .then(data => {
+            console.log("=== GANTT DATA LOADED ===");
+            console.log("Items:", data);
+            console.log("========================");
+            setGanttItems(data);
+          })
+          .catch(err => console.error("Failed to load Gantt data:", err));
+      } else if (currentProject.tasks && currentProject.tasks.length > 0 && currentProject.tasks[0].start_date) {
+        // If no planId but tasks have dates, convert them to gantt items
+        const items: GanttItem[] = currentProject.tasks.map((task: Task) => ({
+          id: task.id,
+          content: task.title,
+          start: task.start_date!,
+          end: task.end_date!,
+          group: task.owner || "Unassigned"
+        }));
+        setGanttItems(items);
+        setStartDate(currentProject.startDate || "");
+        setEndDate(currentProject.endDate || "");
       }
     }
   }, [params.id]);
@@ -146,8 +171,11 @@ export default function ProjectPage() {
     );
   }
 
+  // Check if we have timeline data - either via planId or tasks with dates
+  const hasTimelineData = planId || (project.tasks.length > 0 && project.tasks.some(t => t.start_date && t.end_date));
+  
   // If no timeline generated yet, show message to go back to chat
-  if (!planId || !startDate || !endDate) {
+  if (!hasTimelineData) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4">
         <Calendar className="h-16 w-16 text-muted-foreground opacity-20" />

@@ -283,21 +283,16 @@
 }
 
 .gantt .bar-label {
-  fill: white;
+  fill: #000000 !important;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 700;
   dominant-baseline: central;
   text-anchor: middle;
-  paint-order: stroke fill;
-  stroke: rgba(0, 0, 0, 0.2);
-  stroke-width: 1px;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .gantt .bar-label.big {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 /* Handle (resize) */
@@ -420,9 +415,8 @@
 }
 
 .dark .gantt .bar-label {
-  fill: white;
-  stroke: rgba(0, 0, 0, 0.4);
-  stroke-width: 1.5px;
+  fill: #ffffff !important;
+  font-weight: 700;
 }
 
 .dark .gantt .lower-text,

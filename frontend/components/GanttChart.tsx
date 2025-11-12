@@ -66,15 +66,15 @@ export function GanttChart({ items }: GanttChartProps) {
     try {
       ganttRef.current = new Gantt(containerRef.current, tasks, {
         view_mode: viewMode,
-        bar_height: 50, // Increased height for better visibility
-        bar_corner_radius: 8,
+        bar_height: 35, // Reduced row height
+        bar_corner_radius: 6,
         arrow_curve: 5,
-        padding: 24, // More padding
+        padding: 18, // Reduced padding
         date_format: "YYYY-MM-DD",
         language: "en",
-        ...(viewMode === "Day" ? { column_width: 80 } : 
-           viewMode === "Week" ? { column_width: 50 } : 
-           { column_width: 40 } as any), // Increased gap between days
+        ...(viewMode === "Day" ? { column_width: 100 } : 
+           viewMode === "Week" ? { column_width: 80 } : 
+           { column_width: 60 } as any), // Increased column width for better spacing
         custom_popup_html: (task: any) => {
           const start = new Date(task._start);
           const end = new Date(task._end);

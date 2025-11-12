@@ -155,6 +155,9 @@ async def extract_entities_from_messages(messages: List[Dict[str, str]]) -> Dict
             else:
                 result["message"] = f"I've identified {task_count} task{'s' if task_count != 1 else ''} for {project_name}. To proceed, please provide team member names so I can assign tasks!"
         
+        # Check if ready for timeline generation
+        result["ready_for_timeline"] = is_ready_for_timeline(result.get("tasks", []))
+        
         return result
     finally:
         await llm.close()
@@ -228,6 +231,9 @@ Apply ONLY the requested changes and return the updated JSON."""
         if "message" not in result:
             result["message"] = "Tasks updated successfully."
         
+        # Check if ready for timeline generation
+        result["ready_for_timeline"] = is_ready_for_timeline(result.get("tasks", []))
+        
         return result
     finally:
         await llm.close()
@@ -257,4 +263,43 @@ def merge_entities(existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, A
     
     merged["tasks"] = list(existing_tasks.values())
     
+    # Check if we have enough information to generate timeline
+    merged["ready_for_timeline"] = is_ready_for_timeline(merged.get("tasks", []))
+    
     return merged
+
+
+def is_ready_for_timeline(tasks: List[Dict[str, Any]]) -> bool:
+    """
+    Check if tasks have enough information to generate a timeline automatically.
+    
+    Criteria:
+    - At least 2 tasks (a single task doesn't need a timeline)
+    - All tasks have owners (assigned to someone)
+    - All tasks have valid duration_days > 0
+    - All dependencies reference valid task IDs
+    - Not asking for clarification
+    """
+    if not tasks or len(tasks) < 2:
+        return False
+    
+    task_ids = {task.get("id") for task in tasks}
+    
+    for task in tasks:
+        # Check owner
+        owner = task.get("owner", "").strip()
+        if not owner or owner.lower() in ["unassigned", "tbd", "none", ""]:
+            return False
+        
+        # Check duration
+        duration = task.get("duration_days", 0)
+        if not duration or duration <= 0:
+            return False
+        
+        # Check dependencies are valid
+        dependencies = task.get("dependencies", [])
+        for dep in dependencies:
+            if dep not in task_ids:
+                return False
+    
+    return True

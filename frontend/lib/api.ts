@@ -79,6 +79,7 @@ export async function postChatStream(
   onMessage: (chunk: string) => void,
   onEntities: (entities: any, sessionId: string) => void,
   onError: (error: string) => void,
+  onDone: () => void,
   currentTasks?: Task[]
 ): Promise<void> {
   try {
@@ -125,7 +126,8 @@ export async function postChatStream(
               onError(parsed.message);
             } else if (parsed.type === 'done') {
               // Stream complete
-              break;
+              onDone();
+              return;
             }
           } catch (e) {
             // Skip invalid JSON
@@ -134,8 +136,12 @@ export async function postChatStream(
         }
       }
     }
+    
+    // Ensure onDone is called even if 'done' event wasn't received
+    onDone();
   } catch (error) {
     onError(error instanceof Error ? error.message : "Stream failed");
+    onDone();
   }
 }
 

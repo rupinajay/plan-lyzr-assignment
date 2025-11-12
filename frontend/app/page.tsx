@@ -128,6 +128,7 @@ export default function Home() {
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
       
       let streamedMessage = "";
+      let receivedEntities: any = null;
       
       await postChatStream(
         sessionId,
@@ -143,6 +144,8 @@ export default function Home() {
         },
         // onEntities callback - called when entity extraction complete
         (entities: any, newSessionId: string) => {
+          receivedEntities = entities;
+          
           // Update session ID
           if (!sessionId) {
             setSessionId(newSessionId);
@@ -212,6 +215,20 @@ export default function Home() {
             return newMessages;
           });
         },
+        // onDone callback - called when stream is complete
+        () => {
+          setLoading(false);
+          
+          // Check if we should automatically generate timeline
+          if (receivedEntities && receivedEntities.ready_for_timeline && sessionId) {
+            console.log("🚀 Auto-generating timeline - all required information gathered");
+            
+            // Wait a moment for the task table to render, then auto-generate
+            setTimeout(() => {
+              handleGenerateReport();
+            }, 500);
+          }
+        },
         currentTasks // current tasks for modifications
       );
     } catch (error) {
@@ -224,7 +241,6 @@ export default function Home() {
           }`,
         },
       ]);
-    } finally {
       setLoading(false);
     }
   };
